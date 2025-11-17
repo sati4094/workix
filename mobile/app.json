@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "Workix",
+    "slug": "workix-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "backgroundColor": "#2563eb",
+      "resizeMode": "contain"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.workix.mobile"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#2563eb"
+      },
+      "package": "com.workix.mobile",
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "ACCESS_FINE_LOCATION"
+      ]
+    },
+    "web": {},
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Workix to access your camera to capture photos for work orders."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Workix to access your photos to upload work order documentation."
+        }
+      ]
+    ]
+  }
+}
+
