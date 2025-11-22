@@ -1,0 +1,610 @@
+'use client';
+
+import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { DesktopLayout } from '@/components/desktop-layout';
+import { DataTable } from '@/components/DataTable';
+import { CrudModal } from '@/components/CrudModal';
+import { SearchFilter } from '@/components/SearchFilter';
+import { DeleteConfirmation } from '@/components/DeleteConfirmation';
+import { useWorkOrders, useCreateWorkOrder, useUpdateWorkOrder, useDeleteWorkOrder, useClients, useProjects, useSites, useAssets, useUsers } from '@/hooks/useApi';
+import { workOrderSchema } from '@/lib/validation';
+import type { WorkOrder, CreateWorkOrderDTO } from '@/types';
+import LocationSelector from '@/components/LocationSelector';
+
+export default function WorkOrdersPage() {
+  const router = useRouter();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingWorkOrder, setEditingWorkOrder] = useState<WorkOrder | null>(null);
+  const [deleteWorkOrder, setDeleteWorkOrder] = useState<WorkOrder | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [priorityFilter, setPriorityFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [selectedClient, setSelectedClient] = useState<string>('');
+  const [locationData, setLocationData] = useState({
+    siteId: '',
+    buildingId: 0,
+    floorId: 0,
+    spaceId: 0,
+  });
+
+  // React Query hooks
+  const { data: workOrders = [], isLoading } = useWorkOrders();
+  const { data: clients = [] } = useClients();
+  const { data: projects = [] } = useProjects();
+  const { data: sites = [] } = useSites();
+  const { data: assets = [] } = useAssets();
+  const { data: users = [] } = useUsers();
+  const createMutation = useCreateWorkOrder();
+  const updateMutation = useUpdateWorkOrder();
+  const deleteMutation = useDeleteWorkOrder();
+  
+  // Filter sites based on selected client (sites are linked through projects)
+  const filteredSites = useMemo(() => {
+    if (!selectedClient) return sites;
+    // Get projects for selected client
+    const clientProjects = projects.filter(p => p.client_id === selectedClient);
+    const projectIds = clientProjects.map(p => p.id);
+    // Filter sites that belong to these projects
+    return sites.filter(site => projectIds.includes(site.project_id));
+  }, [sites, projects, selectedClient]);
+
+  // Form setup with Zod validation
+  const form = useForm<any>({
+    defaultValues: {
+      title: '',
+      description: '',
+      client_id: '',
+      site_id: '',
+      building_id: 0,
+      floor_id: 0,
+      space_id: 0,
+      building: '',
+      asset_id: '',
+      location: '',
+      priority: 'medium',
+      status: 'pending',
+      assigned_to: '',
+      scheduled_date: '',
+      due_date: '',
+    },
+  });
+
+  // Filter work orders
+  const filteredWorkOrders = useMemo(() => {
+    let filtered = workOrders;
+
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(wo =>
+        wo.title.toLowerCase().includes(term) ||
+        wo.description?.toLowerCase().includes(term) ||
+        wo.wo_number?.toLowerCase().includes(term)
+      );
+    }
+
+    if (priorityFilter) {
+      filtered = filtered.filter(wo => wo.priority === priorityFilter);
+    }
+
+    if (statusFilter) {
+      filtered = filtered.filter(wo => wo.status === statusFilter);
+    }
+
+    return filtered;
+  }, [workOrders, searchTerm, priorityFilter, statusFilter]);
+
+  // Handlers
+  const handleCreate = () => {
+    setEditingWorkOrder(null);
+    setSelectedFiles([]);
+    setSelectedClient('');
+    setLocationData({ siteId: '', buildingId: 0, floorId: 0, spaceId: 0 });
+    form.reset({
+      title: '',
+      description: '',
+      client_id: '',
+      site_id: '',
+      building_id: 0,
+      floor_id: 0,
+      space_id: 0,
+      building: '',
+      asset_id: '',
+      location: '',
+      priority: 'medium',
+      status: 'pending',
+      assigned_to: '',
+      scheduled_date: '',
+      due_date: '',
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (workOrder: WorkOrder) => {
+    setEditingWorkOrder(workOrder);
+    setSelectedFiles([]);
+    setSelectedClient(workOrder.client_id || '');
+    
+    // Load location data if available
+    setLocationData({
+      siteId: workOrder.site_id || '',
+      buildingId: (workOrder as any).building_id || 0,
+      floorId: (workOrder as any).floor_id || 0,
+      spaceId: (workOrder as any).space_id || 0,
+    });
+    
+    form.reset({
+      title: workOrder.title,
+      description: workOrder.description || '',
+      client_id: workOrder.client_id || '',
+      site_id: workOrder.site_id || '',
+      building_id: (workOrder as any).building_id || 0,
+      floor_id: (workOrder as any).floor_id || 0,
+      space_id: (workOrder as any).space_id || 0,
+      building: workOrder.building || '',
+      asset_id: workOrder.asset_ids?.[0] || '',
+      location: workOrder.location || '',
+      priority: workOrder.priority,
+      status: workOrder.status,
+      assigned_to: workOrder.assigned_to || '',
+      scheduled_date: workOrder.scheduled_start ? new Date(workOrder.scheduled_start).toISOString().split('T')[0] : '',
+      due_date: workOrder.due_date ? new Date(workOrder.due_date).toISOString().split('T')[0] : '',
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setSelectedFiles(prev => [...prev, ...files]);
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = form.handleSubmit(async (data) => {
+    try {
+      // Convert date to ISO format if provided and add location IDs
+      const formattedData = {
+        ...data,
+        building_id: locationData.buildingId || undefined,
+        floor_id: locationData.floorId || undefined,
+        space_id: locationData.spaceId || undefined,
+        source: 'manual',
+        due_date: data.due_date ? new Date(data.due_date).toISOString() : undefined,
+        scheduled_date: data.scheduled_date ? new Date(data.scheduled_date).toISOString() : undefined,
+        asset_ids: data.asset_id ? [data.asset_id] : [],
+      };
+      
+      // TODO: Handle file uploads to backend
+      if (selectedFiles.length > 0) {
+        console.log('Files to upload:', selectedFiles);
+        // formattedData.attachments = await uploadFiles(selectedFiles);
+      }
+
+      if (editingWorkOrder) {
+        await updateMutation.mutateAsync({ id: editingWorkOrder.id, data: formattedData });
+      } else {
+        await createMutation.mutateAsync(formattedData);
+      }
+      setIsModalOpen(false);
+      setSelectedFiles([]);
+    } catch (error) {
+      console.error('Error submitting form:', error);
+    }
+  });
+
+  const handleDelete = async () => {
+    if (deleteWorkOrder) {
+      await deleteMutation.mutateAsync(deleteWorkOrder.id);
+      setDeleteWorkOrder(null);
+    }
+  };
+
+  // Priority badge helper
+  const getPriorityBadge = (priority: string) => {
+    const colors = {
+      Critical: 'bg-red-100 text-red-800',
+      High: 'bg-orange-100 text-orange-800',
+      Medium: 'bg-yellow-100 text-yellow-800',
+      Low: 'bg-green-100 text-green-800',
+    };
+    return colors[priority as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+  };
+
+  // Status badge helper
+  const getStatusBadge = (status: string) => {
+    const colors = {
+      Open: 'bg-blue-100 text-blue-800',
+      'In Progress': 'bg-yellow-100 text-yellow-800',
+      'On Hold': 'bg-orange-100 text-orange-800',
+      Completed: 'bg-green-100 text-green-800',
+      Cancelled: 'bg-gray-100 text-gray-800',
+    };
+    return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+  };
+
+  return (
+    <DesktopLayout>
+      <div className="space-y-6 p-6">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Work Orders</h1>
+            <p className="text-gray-600 mt-2">Manage all work orders and assignments</p>
+          </div>
+          <button
+            onClick={handleCreate}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            + New Work Order
+          </button>
+        </div>
+
+        {/* Search & Filters */}
+        <SearchFilter
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder="Search by title, description, or WO number..."
+          filters={[
+            {
+              label: 'Priority',
+              value: priorityFilter,
+              onChange: setPriorityFilter,
+              options: [
+                { value: '', label: 'All Priorities' },
+                { value: 'Critical', label: 'Critical' },
+                { value: 'High', label: 'High' },
+                { value: 'Medium', label: 'Medium' },
+                { value: 'Low', label: 'Low' },
+              ],
+            },
+            {
+              label: 'Status',
+              value: statusFilter,
+              onChange: setStatusFilter,
+              options: [
+                { value: '', label: 'All Status' },
+                { value: 'Open', label: 'Open' },
+                { value: 'In Progress', label: 'In Progress' },
+                { value: 'On Hold', label: 'On Hold' },
+                { value: 'Completed', label: 'Completed' },
+                { value: 'Cancelled', label: 'Cancelled' },
+              ],
+            },
+          ]}
+        />
+
+        {/* Data Table */}
+        <DataTable
+          data={filteredWorkOrders}
+          loading={isLoading}
+          keyExtractor={(wo) => wo.id}
+          columns={[
+            {
+              key: 'wo_number',
+              label: 'WO #',
+              render: (_, wo: WorkOrder) => (
+                <span className="font-mono text-sm">{wo.wo_number || `WO-${wo.id.substring(0, 8)}`}</span>
+              ),
+            },
+            {
+              key: 'title',
+              label: 'Title',
+              render: (_, wo: WorkOrder) => (
+                <span className="font-medium">{wo.title}</span>
+              ),
+            },
+            {
+              key: 'priority',
+              label: 'Priority',
+              render: (_, wo: WorkOrder) => (
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${getPriorityBadge(wo.priority)}`}>
+                  {wo.priority}
+                </span>
+              ),
+            },
+            {
+              key: 'status',
+              label: 'Status',
+              render: (_, wo: WorkOrder) => (
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadge(wo.status)}`}>
+                  {wo.status}
+                </span>
+              ),
+            },
+            {
+              key: 'due_date',
+              label: 'Due Date',
+              render: (_, wo: WorkOrder) => (
+                <span className="text-sm">{wo.due_date ? new Date(wo.due_date).toLocaleDateString() : '-'}</span>
+              ),
+            },
+          ]}
+          onRowClick={(wo) => router.push(`/work-orders/${wo.id}`)}
+          actions={(wo: WorkOrder) => (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEdit(wo);
+                }}
+                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+              >
+                Edit
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDeleteWorkOrder(wo);
+                }}
+                className="text-red-600 hover:text-red-800 text-sm font-medium"
+              >
+                Delete
+              </button>
+            </>
+          )}
+        />
+      </div>
+
+      {/* Create/Edit Modal */}
+      <CrudModal
+        isOpen={isModalOpen}
+        title={editingWorkOrder ? 'Edit Work Order' : 'New Work Order'}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleSubmit}
+        submitText={editingWorkOrder ? 'Update' : 'Create'}
+        isSubmitting={createMutation.isPending || updateMutation.isPending}
+      >
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Title <span className="text-red-500">*</span>
+            </label>
+            <input
+              {...form.register('title')}
+              type="text"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Work order title"
+            />
+            {form.formState.errors.title && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.title.message}</p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Description <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              {...form.register('description')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Detailed description of the work required"
+              rows={3}
+            />
+            {form.formState.errors.description && (
+              <p className="text-red-500 text-sm mt-1">{form.formState.errors.description.message}</p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Client <span className="text-red-500">*</span>
+              </label>
+              <select
+                {...form.register('client_id')}
+                onChange={(e) => {
+                  setSelectedClient(e.target.value);
+                  form.setValue('client_id', e.target.value);
+                  form.setValue('site_id', ''); // Reset site when client changes
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">Select Client</option>
+                {clients.map((client) => (
+                  <option key={client.id} value={client.id}>
+                    {client.name}
+                  </option>
+                ))}
+              </select>
+              {form.formState.errors.client_id && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.client_id.message}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Site <span className="text-red-500">*</span>
+              </label>
+              <select
+                {...form.register('site_id')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                disabled={!selectedClient && !form.watch('client_id')}
+              >
+                <option value="">Select Site</option>
+                {filteredSites.map((site) => (
+                  <option key={site.id} value={site.id}>
+                    {site.name}
+                  </option>
+                ))}
+              </select>
+              {form.formState.errors.site_id && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.site_id.message}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Location Hierarchy */}
+          <div className="border-t pt-4">
+            <h3 className="text-sm font-medium text-gray-700 mb-3">📍 Location Details</h3>
+            <LocationSelector
+              siteId={locationData.siteId || form.watch('site_id')}
+              buildingId={locationData.buildingId}
+              floorId={locationData.floorId}
+              spaceId={locationData.spaceId}
+              onSiteChange={(id) => {
+                setLocationData(prev => ({ ...prev, siteId: id }));
+                form.setValue('site_id', id);
+              }}
+              onBuildingChange={(id) => {
+                setLocationData(prev => ({ ...prev, buildingId: id }));
+                form.setValue('building_id', id);
+              }}
+              onFloorChange={(id) => {
+                setLocationData(prev => ({ ...prev, floorId: id }));
+                form.setValue('floor_id', id);
+              }}
+              onSpaceChange={(id) => {
+                setLocationData(prev => ({ ...prev, spaceId: id }));
+                form.setValue('space_id', id);
+              }}
+              showLabels={false}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Asset</label>
+            <select
+              {...form.register('asset_id')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Select Asset (Optional)</option>
+              {assets
+                .filter(asset => !form.watch('site_id') || asset.site_id === form.watch('site_id'))
+                .map((asset) => (
+                  <option key={asset.id} value={asset.id}>
+                    {asset.name} ({asset.asset_tag}) - {asset.type}
+                  </option>
+                ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+              <select
+                {...form.register('priority')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+                <option value="critical">Critical</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <select
+                {...form.register('status')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="pending">Pending</option>
+                <option value="acknowledged">Acknowledged</option>
+                <option value="in_progress">In Progress</option>
+                <option value="on_hold">On Hold</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Assign To</label>
+            <select
+              {...form.register('assigned_to')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Unassigned</option>
+              {users
+                .filter(user => user.role === 'technician' || user.role === 'manager')
+                .map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.name} - {user.role}
+                  </option>
+                ))}
+            </select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Scheduled Date</label>
+              <input
+                {...form.register('scheduled_date')}
+                type="date"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label>
+              <input
+                {...form.register('due_date')}
+                type="date"
+                min={new Date().toISOString().split('T')[0]}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              />
+              {form.formState.errors.due_date && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.due_date.message}</p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Attachments (Pictures & Documents)
+            </label>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+              <input
+                type="file"
+                multiple
+                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
+                onChange={handleFileChange}
+                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                Supported: Images (JPG, PNG), PDF, Word, Excel
+              </p>
+            </div>
+
+            {selectedFiles.length > 0 && (
+              <div className="mt-3 space-y-2">
+                <p className="text-sm font-medium text-gray-700">Selected Files:</p>
+                {selectedFiles.map((file, index) => (
+                  <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-sm text-gray-700">{file.name}</span>
+                      <span className="text-xs text-gray-500">
+                        ({(file.size / 1024).toFixed(1)} KB)
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(index)}
+                      className="text-red-500 hover:text-red-700 text-sm font-medium"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </CrudModal>
+
+      {/* Delete Confirmation */}
+      <DeleteConfirmation
+        isOpen={!!deleteWorkOrder}
+        itemName={deleteWorkOrder?.title || ''}
+        onConfirm={handleDelete}
+        onClose={() => setDeleteWorkOrder(null)}
+        isDeleting={deleteMutation.isPending}
+      />
+    </DesktopLayout>
+  );
+}

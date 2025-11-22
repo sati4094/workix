@@ -190,15 +190,19 @@ exports.createWorkOrder = asyncHandler(async (req, res) => {
   const {
     title,
     description,
-    source,
+    source = 'manual',
     priority,
     site_id,
+    client_id,
+    building,
+    location,
     asset_ids,
     assigned_to,
     performance_deviation_details,
     customer_complaint_details,
     reference_pictures,
     due_date,
+    scheduled_date,
     estimated_hours,
   } = req.body;
 
@@ -208,7 +212,7 @@ exports.createWorkOrder = asyncHandler(async (req, res) => {
   }
 
   // Verify site exists
-  const siteResult = await query('SELECT id FROM sites WHERE id = $1', [site_id]);
+  const siteResult = await query('SELECT id, project_id FROM sites WHERE id = $1', [site_id]);
   if (siteResult.rows.length === 0) {
     throw new AppError('Site not found', 404);
   }
@@ -216,22 +220,27 @@ exports.createWorkOrder = asyncHandler(async (req, res) => {
   // Verify assigned technician if provided
   if (assigned_to) {
     const technicianResult = await query(
-      "SELECT id FROM users WHERE id = $1 AND role = 'technician' AND status = 'active'",
+      "SELECT id FROM users WHERE id = $1 AND (role = 'technician' OR role = 'manager') AND status = 'active'",
       [assigned_to]
     );
     if (technicianResult.rows.length === 0) {
-      throw new AppError('Assigned technician not found or inactive', 404);
+      throw new AppError('Assigned user not found or inactive', 404);
     }
   }
+
+  // Parse dates to ensure proper format
+  const parsedDueDate = due_date ? new Date(due_date).toISOString() : null;
+  const parsedScheduledDate = scheduled_date ? new Date(scheduled_date).toISOString() : null;
 
   const result = await transaction(async (client) => {
     // Insert work order
     const woResult = await client.query(
       `INSERT INTO work_orders (
         title, description, source, priority, site_id, reported_by, assigned_to,
+        building_id, floor_id, space_id,
         performance_deviation_details, customer_complaint_details, reference_pictures,
-        due_date, estimated_hours
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        due_date, scheduled_start, estimated_hours, org_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
       RETURNING *`,
       [
         title,
@@ -241,11 +250,16 @@ exports.createWorkOrder = asyncHandler(async (req, res) => {
         site_id,
         req.user.id,
         assigned_to || null,
+        req.body.building_id || null,
+        req.body.floor_id || null,
+        req.body.space_id || null,
         performance_deviation_details ? JSON.stringify(performance_deviation_details) : null,
         customer_complaint_details ? JSON.stringify(customer_complaint_details) : null,
         reference_pictures ? JSON.stringify(reference_pictures) : null,
-        due_date || null,
+        parsedDueDate,
+        parsedScheduledDate,
         estimated_hours || null,
+        req.user.org_id || 7,
       ]
     );
 

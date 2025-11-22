@@ -3,12 +3,19 @@ const router = express.Router();
 const { query } = require('../database/connection');
 const { verifyToken, restrictTo } = require('../middlewares/auth');
 const { asyncHandler } = require('../middlewares/errorHandler');
+const analyticsController = require('../controllers/analytics.controller');
 
 router.use(verifyToken);
 router.use(restrictTo('admin', 'manager', 'analyst'));
 
-// Dashboard summary
-router.get('/dashboard', asyncHandler(async (req, res) => {
+// NEW: Comprehensive dashboard statistics
+router.get('/dashboard', analyticsController.getDashboardStats);
+
+// NEW: Real-time metrics
+router.get('/real-time', analyticsController.getRealTimeMetrics);
+
+// LEGACY: Old dashboard endpoint (kept for backwards compatibility)
+router.get('/dashboard-legacy', asyncHandler(async (req, res) => {
   // Work order statistics
   const workOrderStats = await query(`
     SELECT 

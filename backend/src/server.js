@@ -21,6 +21,25 @@ const workOrderRoutes = require('./routes/workOrder.routes');
 const ppmRoutes = require('./routes/ppm.routes');
 const aiRoutes = require('./routes/ai.routes');
 const analyticsRoutes = require('./routes/analytics.routes');
+const templateRoutes = require('./routes/template.routes');
+const slaRoutes = require('./routes/sla.routes');
+const inventoryRoutes = require('./routes/inventory.routes');
+const attachmentRoutes = require('./routes/attachment.routes');
+const notificationRoutes = require('./routes/notification.routes');
+
+// Enterprise routes
+const buildingsRoutes = require('./routes/buildings.routes');
+const floorsRoutes = require('./routes/floors.routes');
+const spacesRoutes = require('./routes/spaces.routes');
+const partsRoutes = require('./routes/parts.routes');
+const storeroomsRoutes = require('./routes/storerooms.routes');
+const vendorsRoutes = require('./routes/vendors.routes');
+const teamsRoutes = require('./routes/teams.routes');
+const rolesRoutes = require('./routes/roles.routes');
+const assetCategoriesRoutes = require('./routes/asset-categories.routes');
+const assetTypesRoutes = require('./routes/asset-types.routes');
+
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -31,7 +50,25 @@ app.use(helmet());
 
 // CORS configuration
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN?.split(',') || '*',
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, Tauri, or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = process.env.CORS_ORIGIN?.split(',') || [];
+    
+    // In development, allow all localhost and tauri origins
+    if (process.env.NODE_ENV === 'development') {
+      if (origin.includes('localhost') || origin.includes('tauri')) {
+        return callback(null, true);
+      }
+    }
+    
+    if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   optionsSuccessStatus: 200
 };
@@ -40,6 +77,9 @@ app.use(cors(corsOptions));
 // Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Serve uploaded files
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Compression middleware
 app.use(compression());
@@ -73,6 +113,23 @@ app.use(`/api/${API_VERSION}/work-orders`, workOrderRoutes);
 app.use(`/api/${API_VERSION}/ppm`, ppmRoutes);
 app.use(`/api/${API_VERSION}/ai`, aiRoutes);
 app.use(`/api/${API_VERSION}/analytics`, analyticsRoutes);
+app.use(`/api/${API_VERSION}/templates`, templateRoutes);
+app.use(`/api/${API_VERSION}/sla`, slaRoutes);
+app.use(`/api/${API_VERSION}/inventory`, inventoryRoutes);
+app.use(`/api/${API_VERSION}/attachments`, attachmentRoutes);
+app.use(`/api/${API_VERSION}/notifications`, notificationRoutes);
+
+// Enterprise routes
+app.use(`/api/${API_VERSION}/buildings`, buildingsRoutes);
+app.use(`/api/${API_VERSION}/floors`, floorsRoutes);
+app.use(`/api/${API_VERSION}/spaces`, spacesRoutes);
+app.use(`/api/${API_VERSION}/parts`, partsRoutes);
+app.use(`/api/${API_VERSION}/storerooms`, storeroomsRoutes);
+app.use(`/api/${API_VERSION}/vendors`, vendorsRoutes);
+app.use(`/api/${API_VERSION}/teams`, teamsRoutes);
+app.use(`/api/${API_VERSION}/roles`, rolesRoutes);
+app.use(`/api/${API_VERSION}/asset-categories`, assetCategoriesRoutes);
+app.use(`/api/${API_VERSION}/asset-types`, assetTypesRoutes);
 
 // 404 handler
 app.use((req, res) => {
