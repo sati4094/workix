@@ -1,5 +1,3 @@
-import { invoke } from '@tauri-apps/api/core';
-
 export interface ApiResponse<T> {
   success: boolean;
   data?: T;
@@ -7,7 +5,23 @@ export interface ApiResponse<T> {
 }
 
 export class DesktopApiClient {
-  private backendUrl = 'http://localhost:5000/api';
+  private backendUrl = 'http://localhost:5000/api/v1';
+
+  private getToken(): string | null {
+    if (typeof window === 'undefined') return null;
+    
+    // Get token from Zustand persist storage
+    try {
+      const authData = localStorage.getItem('workix-auth');
+      if (authData) {
+        const parsed = JSON.parse(authData);
+        return parsed.state?.token || null;
+      }
+    } catch (e) {
+      console.error('Error reading auth token:', e);
+    }
+    return null;
+  }
 
   async get<T>(endpoint: string): Promise<T> {
     return this.callApi<T>(endpoint, 'GET');
@@ -31,17 +45,38 @@ export class DesktopApiClient {
     body?: any
   ): Promise<T> {
     try {
-      const response = await invoke<ApiResponse<T>>('call_backend_api', {
-        endpoint,
-        method,
-        body: body || null,
-      });
+      const token = this.getToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
 
-      if (!response.success) {
-        throw new Error(response.error || 'API call failed');
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
 
-      return response.data as T;
+      const config: RequestInit = {
+        method,
+        headers,
+      };
+
+      if (body && (method === 'POST' || method === 'PUT')) {
+        config.body = JSON.stringify(body);
+      }
+
+      const response = await fetch(`${this.backendUrl}/${endpoint}`, config);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const jsonResponse = await response.json();
+
+      if (!jsonResponse.success) {
+        throw new Error(jsonResponse.message || jsonResponse.error || 'API call failed');
+      }
+
+      return jsonResponse.data as T;
     } catch (error) {
       console.error('API Error:', error);
       throw error;
@@ -66,7 +101,7 @@ export class DesktopApiClient {
   }
 
   async getAnalytics() {
-    return this.get<any>('analytics/summary');
+    return this.get<any>('analytics/dashboard');
   }
 }
 

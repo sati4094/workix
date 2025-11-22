@@ -28,11 +28,24 @@ export default function DashboardPage() {
   const loadDashboard = async () => {
     try {
       setLoading(true);
-      const analytics = await apiClient.getAnalytics();
-      setStats(analytics);
-    } catch (err) {
-      setError('Failed to load dashboard data');
-      console.error(err);
+      setError('');
+      const response = await apiClient.getAnalytics();
+      console.log('Dashboard API Response:', response);
+      
+      // The API client returns response.data directly, so response.kpis is the correct path
+      const kpis = response?.kpis || {};
+      console.log('KPIs:', kpis);
+      
+      setStats({
+        totalWorkOrders: kpis.total_work_orders || 0,
+        inProgress: kpis.in_progress || 0,
+        completedToday: kpis.completed_this_week || 0,
+        technicians: kpis.active_technicians || 0
+      });
+    } catch (err: any) {
+      const errorMsg = err?.message || 'Failed to load dashboard data';
+      setError(errorMsg);
+      console.error('Dashboard load error:', err);
     } finally {
       setLoading(false);
     }
