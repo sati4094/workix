@@ -195,7 +195,15 @@ export default function AssetsPage() {
               key: 'asset_tag',
               label: 'Asset Tag',
               render: (_, asset: Asset) => (
-                <span className="font-mono text-sm">{asset.asset_tag || '-'}</span>
+                <a 
+                  href={`/assets/${asset.id}`}
+                  className="font-mono text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-semibold"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                >
+                  {asset.asset_tag || '-'}
+                </a>
               ),
             },
             {

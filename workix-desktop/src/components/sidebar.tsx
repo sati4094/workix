@@ -29,15 +29,13 @@ export function Sidebar() {
   return (
     <aside
       className={clsx(
-        'bg-gray-900 text-white transition-all duration-300 ease-in-out overflow-hidden',
+        'bg-gradient-to-b from-[#3a3d43] via-[#5b5f65] to-[#232428] text-white transition-all duration-300 ease-in-out overflow-hidden',
         sidebarOpen ? 'w-64' : 'w-20'
       )}
     >
-      <div className="p-4">
-        <div className="text-2xl font-bold">W</div>
-      </div>
+      <div className="p-4"></div>
 
-      <nav className="mt-8 space-y-2 px-2">
+      <nav className="mt-8 space-y-2 px-2 font-sans">
         {menuItems.map((item) => {
           const isActive = pathname === item.href;
           return (
@@ -47,13 +45,18 @@ export function Sidebar() {
               className={clsx(
                 'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors',
                 isActive
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-800'
+                  ? 'bg-white/15 text-white font-semibold shadow'
+                  : 'text-gray-200 hover:bg-white/10 hover:text-white'
               )}
               title={item.label}
             >
-              <span className="text-xl">{item.icon}</span>
-              {sidebarOpen && <span className="text-sm">{item.label}</span>}
+              <span className={clsx(
+                'text-xl flex items-center',
+                isActive ? 'text-white drop-shadow' : 'text-white/80'
+              )}>
+                {item.icon}
+              </span>
+              {sidebarOpen && <span className={clsx('text-sm font-sans', isActive ? 'text-white' : 'text-white/90')}>{item.label}</span>}
             </Link>
           );
         })}

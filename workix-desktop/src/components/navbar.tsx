@@ -64,7 +64,7 @@ export function Navbar() {
         <h1 className="text-xl font-bold text-gray-900">Workix Desktop</h1>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 ml-auto">
         {user && (
           <>
             <div className="flex items-center gap-2">
@@ -81,37 +81,6 @@ export function Navbar() {
             </button>
           </>
         )}
-      </div>
-
-      {/* Window controls */}
-      <div className="flex items-center gap-2 ml-auto">
-        <button
-          onClick={handleMinimize}
-          className="p-1 hover:bg-gray-100 rounded transition-colors"
-          title="Minimize"
-        >
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M19 13H5v-2h14v2z" />
-          </svg>
-        </button>
-        <button
-          onClick={handleMaximize}
-          className="p-1 hover:bg-gray-100 rounded transition-colors"
-          title="Maximize"
-        >
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z" />
-          </svg>
-        </button>
-        <button
-          onClick={handleClose}
-          className="p-1 hover:bg-red-100 rounded transition-colors"
-          title="Close"
-        >
-          <svg className="w-4 h-4 text-red-600" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41z" />
-          </svg>
-        </button>
       </div>
     </nav>
   );
