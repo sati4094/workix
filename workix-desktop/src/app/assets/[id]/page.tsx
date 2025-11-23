@@ -144,10 +144,26 @@ export default function AssetDetailPage() {
         `http://localhost:5000/api/v1/assets/${assetId}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
       const data = await response.json();
-      setAsset(data.data);
+      
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to fetch asset');
+      }
+      
+      const assetData = data.data?.asset || data.data;
+      if (!assetData) {
+        throw new Error('No asset data received');
+      }
+      
+      setAsset(assetData);
     } catch (error) {
       console.error('Error fetching asset:', error);
+      setAsset(null);
     } finally {
       setLoading(false);
     }

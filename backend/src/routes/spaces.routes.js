@@ -12,10 +12,11 @@ router.get('/', asyncHandler(async (req, res) => {
   const offset = (page - 1) * limit;
   
   
-  let query = `SELECT s.*, f.name as floor_name, f.floor_number, b.name as building_name 
+  let query = `SELECT s.*, f.name as floor_name, f.floor_number, b.name as building_name, b.site_id, si.name as site_name 
                FROM spaces s 
                LEFT JOIN floors f ON s.floor_id = f.id 
                LEFT JOIN buildings b ON f.building_id = b.id 
+               LEFT JOIN sites si ON b.site_id = si.id 
                WHERE s.is_active = true`;
   const params = [];
   
@@ -46,10 +47,11 @@ router.get('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
   
   const result = await pool.query(`
-    SELECT s.*, f.name as floor_name, f.floor_number, b.name as building_name
+    SELECT s.*, f.name as floor_name, f.floor_number, b.name as building_name, b.site_id, si.name as site_name
     FROM spaces s
     LEFT JOIN floors f ON s.floor_id = f.id
     LEFT JOIN buildings b ON f.building_id = b.id
+    LEFT JOIN sites si ON b.site_id = si.id
     WHERE s.id = $1 AND s.is_active = true
   `, [id]);
   

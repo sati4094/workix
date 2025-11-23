@@ -90,7 +90,7 @@ export function DataTable<T extends Record<string, any>>({
                           : [...cols, col.key]
                       );
                     }}
-                    className="form-checkbox rounded text-blue-600 focus:ring-blue-500"
+                    className="form-checkbox rounded text-purple-600 focus:ring-purple-500"
                   />
                   <span className="text-xs text-gray-700">{col.label ?? col.key}</span>
                 </label>

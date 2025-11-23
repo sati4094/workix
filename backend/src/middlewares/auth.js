@@ -47,6 +47,15 @@ const verifyToken = asyncHandler(async (req, res, next) => {
 
     // Attach user to request
     req.user = user;
+    
+    // Set PostgreSQL session variable for Row-Level Security
+    try {
+      await query(`SET LOCAL app.current_user_id = $1`, [user.id]);
+    } catch (rlsError) {
+      // Log but don't fail if RLS context setting fails
+      console.warn('Failed to set RLS context:', rlsError.message);
+    }
+    
     next();
   } catch (error) {
     if (error.name === 'JsonWebTokenError') {
@@ -104,9 +113,61 @@ const optionalAuth = asyncHandler(async (req, res, next) => {
   next();
 });
 
+// Check if user has specific permissions
+const requirePermissions = (...permissionSlugs) => {
+  return asyncHandler(async (req, res, next) => {
+    if (!req.user || !req.user.id) {
+      throw new AppError('Authentication required.', 401);
+    }
+
+    // SuperAdmin bypasses all permission checks
+    const roleCheck = await query(
+      `SELECT sr.is_workix_role, sr.slug
+       FROM users u
+       JOIN system_roles sr ON u.system_role_id = sr.id
+       WHERE u.id = $1`,
+      [req.user.id]
+    );
+
+    if (roleCheck.rows.length > 0 && roleCheck.rows[0].slug === 'superadmin') {
+      return next();
+    }
+
+    // Check if user has any of the required permissions through role or direct assignment
+    const result = await query(
+      `SELECT DISTINCT p.slug
+       FROM permissions p
+       WHERE p.slug = ANY($1)
+       AND (
+         -- Permission through role
+         EXISTS (
+           SELECT 1 FROM users u
+           JOIN role_permissions rp ON u.system_role_id = rp.system_role_id
+           WHERE u.id = $2 AND rp.permission_id = p.id AND rp.granted = true
+         )
+         -- Or direct user permission
+         OR EXISTS (
+           SELECT 1 FROM user_permissions up
+           WHERE up.user_id = $2 AND up.permission_id = p.id 
+           AND up.granted = true
+           AND (up.expires_at IS NULL OR up.expires_at > NOW())
+         )
+       )`,
+      [permissionSlugs, req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      throw new AppError('You do not have permission to perform this action.', 403);
+    }
+
+    next();
+  });
+};
+
 module.exports = {
   verifyToken,
   restrictTo,
   optionalAuth,
+  requirePermissions,
 };
 

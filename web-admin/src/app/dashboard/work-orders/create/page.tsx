@@ -14,6 +14,7 @@ export default function CreateWorkOrderPage() {
   const [loading, setLoading] = useState(false)
   const [loadingData, setLoadingData] = useState(true)
   const [sites, setSites] = useState<any[]>([])
+  const [buildings, setBuildings] = useState<any[]>([])
   const [users, setUsers] = useState<any[]>([])
   const [assets, setAssets] = useState<any[]>([])
   
@@ -23,6 +24,7 @@ export default function CreateWorkOrderPage() {
     source: 'manual',
     priority: 'medium',
     site_id: '',
+    building_id: '',
     assigned_to: '',
     asset_ids: [] as string[],
   })
@@ -52,13 +54,35 @@ export default function CreateWorkOrderPage() {
 
   useEffect(() => {
     if (formData.site_id) {
-      fetchAssets(formData.site_id)
+      fetchBuildings(formData.site_id)
+      setFormData({ ...formData, building_id: '' })
+      setBuildings([])
+      setAssets([])
     }
   }, [formData.site_id])
 
-  const fetchAssets = async (siteId: string) => {
+  useEffect(() => {
+    if (formData.building_id) {
+      fetchAssets(formData.building_id)
+    } else if (formData.site_id) {
+      // Fetch assets for entire site if no building selected
+      fetchAssets(formData.site_id, true)
+    }
+  }, [formData.building_id])
+
+  const fetchBuildings = async (siteId: string) => {
     try {
-      const response: any = await apiService.getAssets({ site_id: siteId, limit: 100 })
+      const response: any = await apiService.getBuildings({ site_id: siteId, limit: 100 })
+      setBuildings(response.data.buildings || [])
+    } catch (error) {
+      console.error('Failed to fetch buildings:', error)
+    }
+  }
+
+  const fetchAssets = async (locationId: string, isSite: boolean = false) => {
+    try {
+      const params = isSite ? { site_id: locationId } : { building_id: locationId }
+      const response: any = await apiService.getAssets({ ...params, limit: 100 })
       setAssets(response.data.assets || [])
     } catch (error) {
       console.error('Failed to fetch assets:', error)
@@ -164,21 +188,40 @@ export default function CreateWorkOrderPage() {
               </div>
             </div>
 
+            {/* Site */}
+            <div>
+              <Label htmlFor="site">Site *</Label>
+              <select
+                id="site"
+                value={formData.site_id}
+                onChange={(e) => setFormData({ ...formData, site_id: e.target.value, building_id: '' })}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                required
+              >
+                <option value="">Select a site...</option>
+                {sites.map((site) => (
+                  <option key={site.id} value={site.id}>
+                    {site.name} {site.enterprise_name ? `- ${site.enterprise_name}` : site.project_name ? `- ${site.project_name}` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
-              {/* Site */}
+              {/* Building */}
               <div>
-                <Label htmlFor="site">Site *</Label>
+                <Label htmlFor="building">Building (Optional)</Label>
                 <select
-                  id="site"
-                  value={formData.site_id}
-                  onChange={(e) => setFormData({ ...formData, site_id: e.target.value })}
+                  id="building"
+                  value={formData.building_id}
+                  onChange={(e) => setFormData({ ...formData, building_id: e.target.value })}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  required
+                  disabled={!formData.site_id || buildings.length === 0}
                 >
-                  <option value="">Select a site...</option>
-                  {sites.map((site) => (
-                    <option key={site.id} value={site.id}>
-                      {site.name} - {site.project_name}
+                  <option value="">All buildings in site</option>
+                  {buildings.map((building) => (
+                    <option key={building.id} value={building.id}>
+                      {building.building_name}
                     </option>
                   ))}
                 </select>

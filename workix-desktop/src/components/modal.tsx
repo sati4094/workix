@@ -60,7 +60,7 @@ export function Modal({
               <button
                 onClick={onSubmit}
                 disabled={submitDisabled}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 shadow-md"
               >
                 {submitText}
               </button>

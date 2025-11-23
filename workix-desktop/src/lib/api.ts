@@ -105,12 +105,23 @@ export const api = {
     delete: (id: string) => apiClient.delete(`/assets/${id}`),
   },
 
+  // Enterprises (formerly Clients)
+  enterprises: {
+    getAll: (params?: PaginationParams) => apiClient.get('/enterprises', { params }),
+    getById: (id: string) => apiClient.get(`/enterprises/${id}`),
+    create: (data: Partial<Client>) => apiClient.post('/enterprises', data),
+    update: (id: string, data: Partial<Client>) => apiClient.patch(`/enterprises/${id}`, data),
+    delete: (id: string) => apiClient.delete(`/enterprises/${id}`),
+    getStats: (id: string) => apiClient.get(`/enterprises/${id}/stats`),
+  },
+
+  // Legacy clients endpoint (for backward compatibility)
   clients: {
-    getAll: (params?: PaginationParams) => apiClient.get('/clients', { params }),
-    getById: (id: string) => apiClient.get(`/clients/${id}`),
-    create: (data: Partial<Client>) => apiClient.post('/clients', data),
-    update: (id: string, data: Partial<Client>) => apiClient.patch(`/clients/${id}`, data),
-    delete: (id: string) => apiClient.delete(`/clients/${id}`),
+    getAll: (params?: PaginationParams) => apiClient.get('/enterprises', { params }),
+    getById: (id: string) => apiClient.get(`/enterprises/${id}`),
+    create: (data: Partial<Client>) => apiClient.post('/enterprises', data),
+    update: (id: string, data: Partial<Client>) => apiClient.patch(`/enterprises/${id}`, data),
+    delete: (id: string) => apiClient.delete(`/enterprises/${id}`),
   },
 
   projects: {
@@ -329,6 +340,19 @@ export const api = {
     update: (id: number, data: Partial<AssetType>) => apiClient.patch(`/asset-types/${id}`, data),
     delete: (id: number) => apiClient.delete(`/asset-types/${id}`),
   },
+
+  // Sync endpoints for offline support
+  sync: {
+    getStatus: () => apiClient.get('/sync/status'),
+    getWorkOrders: (params: { updated_since: number; limit?: number }) =>
+      apiClient.get('/sync/work-orders', { params }),
+    pushWorkOrders: (data: { work_orders: any[] }) =>
+      apiClient.post('/sync/work-orders', data),
+    getActivities: (params: { updated_since: number; work_order_id?: string; limit?: number }) =>
+      apiClient.get('/sync/activities', { params }),
+    pushActivities: (data: { activities: any[] }) =>
+      apiClient.post('/sync/activities', data),
+  },
 };
 
 export const handleApiError = (error: unknown): string => {
@@ -343,4 +367,5 @@ export const handleApiError = (error: unknown): string => {
   return 'An unexpected error occurred';
 };
 
+// Default export
 export default apiClient;

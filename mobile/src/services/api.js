@@ -108,6 +108,17 @@ export const apiService = {
   getSites: (params) => api.get(API_CONFIG.ENDPOINTS.SITES, { params }),
   getSiteById: (id) => api.get(`${API_CONFIG.ENDPOINTS.SITES}/${id}`),
   
+  // Enterprises (replaces Clients)
+  getEnterprises: (params) => api.get(API_CONFIG.ENDPOINTS.ENTERPRISES, { params }),
+  getEnterpriseById: (id) => api.get(`${API_CONFIG.ENDPOINTS.ENTERPRISES}/${id}`),
+  createEnterprise: (data) => api.post(API_CONFIG.ENDPOINTS.ENTERPRISES, data),
+  updateEnterprise: (id, data) => api.patch(`${API_CONFIG.ENDPOINTS.ENTERPRISES}/${id}`, data),
+  
+  // Buildings
+  getBuildings: (params) => api.get(API_CONFIG.ENDPOINTS.BUILDINGS, { params }),
+  getBuildingById: (id) => api.get(`${API_CONFIG.ENDPOINTS.BUILDINGS}/${id}`),
+  getBuildingsBySite: (siteId) => api.get(API_CONFIG.ENDPOINTS.BUILDINGS, { params: { site_id: siteId } }),
+  
   // PPM
   getPPMSchedules: (params) => api.get(API_CONFIG.ENDPOINTS.PPM_SCHEDULES, { params }),
   updatePPMSchedule: (id, data) => api.patch(`${API_CONFIG.ENDPOINTS.PPM_SCHEDULES}/${id}`, data),

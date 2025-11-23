@@ -9,13 +9,12 @@ const menuItems = [
   { label: 'Dashboard', href: '/dashboard', icon: '📊' },
   { label: 'Work Orders', href: '/work-orders', icon: '📋' },
   { label: 'Assets', href: '/assets', icon: '🔧' },
-  { label: 'Inventory', href: '/dashboard/inventory', icon: '📦' },
-  { label: 'Clients', href: '/dashboard/clients', icon: '🏢' },
-  { label: 'Projects', href: '/dashboard/projects', icon: '🎯' },
+  { label: 'Enterprises', href: '/dashboard/enterprises', icon: '🏢' },
   { label: 'Sites', href: '/dashboard/sites', icon: '📍' },
+  { label: 'Buildings', href: '/dashboard/buildings', icon: '🏗️' },
+  { label: 'Projects', href: '/dashboard/projects', icon: '🎯' },
+  { label: 'Inventory', href: '/dashboard/inventory', icon: '📦' },
   { label: 'PPM', href: '/dashboard/ppm', icon: '⚡' },
-  { label: 'Templates', href: '/dashboard/templates', icon: '📝' },
-  { label: 'SLA Policies', href: '/dashboard/sla-policies', icon: '⏱️' },
   { label: 'Analytics', href: '/dashboard/analytics', icon: '📈' },
   { label: 'Users', href: '/users', icon: '👥' },
   { label: 'Reports', href: '/dashboard/reports', icon: '📑' },
@@ -29,11 +28,11 @@ export function Sidebar() {
   return (
     <aside
       className={clsx(
-        'bg-gradient-to-b from-[#3a3d43] via-[#5b5f65] to-[#232428] text-white transition-all duration-300 ease-in-out overflow-hidden',
-        sidebarOpen ? 'w-64' : 'w-20'
+        'bg-gradient-to-b from-purple-900 via-purple-800 to-pink-900 text-white transition-all duration-300 ease-in-out overflow-hidden shadow-xl',
+        sidebarOpen ? 'w-40' : 'w-12'
       )}
     >
-      <div className="p-4"></div>
+      <div className="p-2"></div>
 
       <nav className="mt-8 space-y-2 px-2 font-sans">
         {menuItems.map((item) => {
@@ -43,10 +42,10 @@ export function Sidebar() {
               key={item.href}
               href={item.href}
               className={clsx(
-                'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors',
+                'flex items-center gap-3 px-3 py-2 rounded-lg transition-all',
                 isActive
-                  ? 'bg-white/15 text-white font-semibold shadow'
-                  : 'text-gray-200 hover:bg-white/10 hover:text-white'
+                  ? 'bg-gradient-to-r from-pink-500 to-purple-500 text-white font-semibold shadow-lg'
+                  : 'text-gray-200 hover:bg-white/10 hover:text-white hover:shadow-md'
               )}
               title={item.label}
             >

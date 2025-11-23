@@ -52,9 +52,9 @@ export default function Home() {
 
         {loading ? (
           <div className="flex items-center justify-center space-x-2">
-            <div className="h-3 w-3 bg-blue-500 rounded-full animate-pulse"></div>
-            <div className="h-3 w-3 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-            <div className="h-3 w-3 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+            <div className="h-3 w-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full animate-pulse"></div>
+            <div className="h-3 w-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+            <div className="h-3 w-3 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
           </div>
         ) : (
           <>
@@ -75,10 +75,23 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-8 rounded-lg">
+            {isTauri && (
+              <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white p-6 rounded-lg mb-6">
+                <h3 className="text-xl font-bold mb-2">🗄️ Offline Storage Available</h3>
+                <p className="mb-4">Native SQLite database is ready. Test offline functionality and sync features.</p>
+                <button 
+                  onClick={() => router.push('/test-offline')}
+                  className="bg-white text-green-600 px-6 py-2 rounded font-semibold hover:bg-gray-100 transition-colors"
+                >
+                  Test Offline Features
+                </button>
+              </div>
+            )}
+
+            <div className="bg-gradient-to-br from-purple-600 via-pink-500 to-purple-700 text-white p-8 rounded-lg shadow-xl">
               <h3 className="text-2xl font-bold mb-2">Ready to Get Started?</h3>
               <p className="mb-4">Access all features from the sidebar menu to manage your EPC service operations.</p>
-              <button className="bg-white text-blue-600 px-6 py-2 rounded font-semibold hover:bg-gray-100 transition-colors">
+              <button className="bg-white text-purple-600 px-6 py-2 rounded font-semibold hover:bg-gray-100 transition-colors shadow-md">
                 Explore Features
               </button>
             </div>

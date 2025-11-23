@@ -35,10 +35,10 @@ router.get('/', asyncHandler(async (req, res) => {
   const total = parseInt(countResult.rows[0].total);
 
   const result = await query(
-    `SELECT a.*, s.name as site_name, p.name as project_name
+    `SELECT a.*, s.name as site_name, p.name as portfolio_name
      FROM assets a
      JOIN sites s ON a.site_id = s.id
-     JOIN projects p ON s.project_id = p.id
+     LEFT JOIN portfolios p ON s.portfolio_id = p.id
      ${whereClause}
      ORDER BY a.name ASC
      LIMIT $${paramCount++} OFFSET $${paramCount++}`,
@@ -58,11 +58,11 @@ router.get('/', asyncHandler(async (req, res) => {
 router.get('/:id', asyncHandler(async (req, res) => {
   const result = await query(
     `SELECT a.*, s.name as site_name, s.address as site_address,
-      p.name as project_name, c.name as client_name
+      p.name as portfolio_name, e.name as enterprise_name, e.name as client_name
      FROM assets a
      JOIN sites s ON a.site_id = s.id
-     JOIN projects p ON s.project_id = p.id
-     JOIN clients c ON p.client_id = c.id
+     LEFT JOIN portfolios p ON s.portfolio_id = p.id
+     LEFT JOIN enterprises e ON s.enterprise_id = e.id
      WHERE a.id = $1`,
     [req.params.id]
   );

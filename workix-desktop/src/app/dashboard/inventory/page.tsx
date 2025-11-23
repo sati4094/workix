@@ -33,7 +33,6 @@ export default function InventoryPage() {
   const deleteMutation = useDeleteInventoryItem();
 
   const form = useForm<CreateInventoryItemDTO>({
-    resolver: zodResolver(inventoryItemSchema),
     defaultValues: {
       part_number: '',
       name: '',
@@ -147,7 +146,7 @@ export default function InventoryPage() {
             <h1 className="text-3xl font-bold text-gray-900">Inventory Management</h1>
             <p className="text-gray-600 mt-2">Manage parts and supplies inventory</p>
           </div>
-          <button onClick={handleCreate} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          <button onClick={handleCreate} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all shadow-md">
             + New Inventory Item
           </button>
         </div>
@@ -195,7 +194,7 @@ export default function InventoryPage() {
           ]}
           actions={(i: InventoryItem) => (
             <>
-              <button onClick={(e) => { e.stopPropagation(); handleEdit(i); }} className="text-blue-600 hover:text-blue-800 text-sm font-medium">Edit</button>
+              <button onClick={(e) => { e.stopPropagation(); handleEdit(i); }} className="text-purple-600 hover:text-purple-800 text-sm font-medium">Edit</button>
               <button onClick={(e) => { e.stopPropagation(); setDeleteItem(i); }} className="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
             </>
           )}

@@ -68,7 +68,7 @@ export function Navbar() {
         {user && (
           <>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-md">
                 {user.name?.charAt(0) || 'U'}
               </div>
               <span className="text-sm text-gray-600">{user.name}</span>

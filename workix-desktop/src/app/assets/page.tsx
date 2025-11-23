@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { DesktopLayout } from '@/components/desktop-layout';
@@ -13,6 +14,7 @@ import { assetSchema } from '@/lib/validation';
 import type { Asset, CreateAssetDTO } from '@/types';
 
 export default function AssetsPage() {
+  const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [deleteAsset, setDeleteAsset] = useState<Asset | null>(null);
@@ -28,7 +30,6 @@ export default function AssetsPage() {
 
   // Form setup with Zod validation
   const form = useForm<CreateAssetDTO>({
-    resolver: zodResolver(assetSchema),
     defaultValues: {
       name: '',
       asset_tag: '',
@@ -143,7 +144,7 @@ export default function AssetsPage() {
           </div>
           <button
             onClick={handleCreate}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all shadow-md"
           >
             + New Asset
           </button>
@@ -190,20 +191,15 @@ export default function AssetsPage() {
           data={filteredAssets}
           loading={isLoading}
           keyExtractor={(asset) => asset.id}
+          onRowClick={(asset) => router.push(`/assets/${asset.id}`)}
           columns={[
             {
               key: 'asset_tag',
               label: 'Asset Tag',
               render: (_, asset: Asset) => (
-                <a 
-                  href={`/assets/${asset.id}`}
-                  className="font-mono text-sm text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-semibold"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
-                >
+                <span className="font-mono text-sm text-blue-600 font-semibold">
                   {asset.asset_tag || '-'}
-                </a>
+                </span>
               ),
             },
             {
@@ -258,7 +254,7 @@ export default function AssetsPage() {
                   e.stopPropagation();
                   handleEdit(asset);
                 }}
-                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                className="text-purple-600 hover:text-purple-800 text-sm font-medium"
               >
                 Edit
               </button>

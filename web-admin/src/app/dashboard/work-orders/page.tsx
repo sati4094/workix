@@ -45,6 +45,9 @@ export default function WorkOrdersPage() {
       wo.title?.toLowerCase().includes(query) ||
       wo.work_order_number?.toLowerCase().includes(query) ||
       wo.site_name?.toLowerCase().includes(query) ||
+      wo.building_name?.toLowerCase().includes(query) ||
+      wo.asset_name?.toLowerCase().includes(query) ||
+      wo.enterprise_name?.toLowerCase().includes(query) ||
       wo.client_name?.toLowerCase().includes(query)
     )
   })
@@ -146,9 +149,11 @@ export default function WorkOrdersPage() {
                       </span>
                     </div>
                     <CardTitle className="text-xl mb-2">{wo.title}</CardTitle>
-                    <div className="flex items-center space-x-4 text-sm text-gray-600">
-                      <span>📍 {wo.site_name}</span>
-                      <span>🏢 {wo.client_name}</span>
+                    <div className="flex items-center flex-wrap gap-x-4 gap-y-1 text-sm text-gray-600">
+                      {wo.enterprise_name && <span>🏢 {wo.enterprise_name}</span>}
+                      {wo.site_name && <span>📍 {wo.site_name}</span>}
+                      {wo.building_name && <span>🏗️ {wo.building_name}</span>}
+                      {wo.asset_name && <span>⚙️ {wo.asset_name}</span>}
                       {wo.assigned_technician_name && (
                         <span>👤 {wo.assigned_technician_name}</span>
                       )}

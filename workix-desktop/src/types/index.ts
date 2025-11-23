@@ -72,16 +72,31 @@ export interface WorkOrder {
   id: string;
   title: string;
   description: string;
+  work_order_number?: string;
   source: WorkOrderSource;
   priority: WorkOrderPriority;
   status: WorkOrderStatus;
+  work_type?: 'corrective' | 'preventive' | 'inspection' | 'emergency';
   
-  // Relationships
+  // Relationships (New Architecture)
   site_id: string;
   site_name?: string;
   site_address?: string;
+  site_code?: string;
+  building_id?: string;
+  building_name?: string;
+  building_code?: string;
+  enterprise_id?: string;
+  enterprise_name?: string;
+  asset_id?: string;
+  asset_name?: string;
+  asset_tag?: string;
+  
+  // Legacy relationships
   project_id?: string;
   project_name?: string;
+  portfolio_id?: string;
+  portfolio_name?: string;
   client_id?: string;
   client_name?: string;
   
@@ -155,13 +170,17 @@ export interface Asset {
   id: string;
   name: string;
   asset_tag: string;
-  type: string;
-  category?: string;
+  type?: string; // Legacy
+  category: string;
   
-  // Location
+  // Location (New Architecture)
   site_id: string;
   site_name?: string;
+  building_id?: string;
+  building_name?: string;
+  building_code?: string;
   location?: string;
+  location_within_site?: string;
   
   // Parent-child hierarchy
   parent_asset_id?: string;
@@ -216,39 +235,60 @@ export interface MaintenanceHistory {
 }
 
 // ============================================================================
-// Client, Project, Site Types
+// Enterprise, Project, Site, Building Types
 // ============================================================================
 
-export interface Client {
+export interface Enterprise {
   id: string;
+  organization_id?: string;
   name: string;
+  email?: string;
+  phone?: string;
+  industry?: string;
+  website?: string;
   contact_person?: string;
-  contact_email: string;
+  contact_email?: string;
   contact_phone?: string;
   address?: string;
   city?: string;
   state?: string;
   country?: string;
   postal_code?: string;
-  website?: string;
-  industry?: string;
+  billing_address?: string;
+  tax_id?: string;
   notes?: string;
-  status: 'active' | 'inactive';
+  status?: 'active' | 'inactive';
+  total_sites?: number;
+  total_buildings?: number;
+  total_assets?: number;
+  open_work_orders?: number;
+  in_progress_work_orders?: number;
   created_at: string;
   updated_at: string;
+  created_by?: string;
+  created_by_name?: string;
 }
+
+// Legacy alias for backward compatibility
+export type Client = Enterprise;
 
 export interface Project {
   id: string;
   name: string;
   description?: string;
-  client_id: string;
+  enterprise_id?: string;
+  enterprise_name?: string;
+  // Legacy fields for backward compatibility
+  client_id?: string;
   client_name?: string;
   manager_id?: string;
   manager_name?: string;
   start_date?: string;
   end_date?: string;
   budget?: number;
+  contract_number?: string;
+  scope_type?: 'enterprise' | 'site' | 'building' | 'category';
+  scope_category?: string;
   status: 'planning' | 'active' | 'on_hold' | 'completed' | 'cancelled';
   sites?: Site[];
   site_count?: number;
@@ -259,24 +299,61 @@ export interface Project {
 export interface Site {
   id: string;
   name: string;
-  project_id: string;
+  facility_code?: string;
+  portfolio_id?: string;
+  portfolio_name?: string;
+  enterprise_id?: string;
+  enterprise_name?: string;
+  // Legacy fields
+  project_id?: string;
   project_name?: string;
-  address: string;
+  address?: string;
   city?: string;
   state?: string;
   country?: string;
   postal_code?: string;
   latitude?: number;
   longitude?: number;
+  square_feet?: number;
+  facility_manager?: string;
   contact_person?: string;
   contact_phone?: string;
   contact_email?: string;
+  buildings?: Building[];
+  building_count?: number;
   assets?: Asset[];
   asset_count?: number;
   work_orders?: WorkOrder[];
   work_order_count?: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface Building {
+  id: string;
+  site_id: string;
+  site_name?: string;
+  name: string;
+  building_code?: string;
+  description?: string;
+  floors?: number;
+  total_area_sqft?: number;
+  construction_year?: number;
+  building_type?: 'office' | 'warehouse' | 'residential' | 'parking' | 'mixed-use';
+  location_notes?: string;
+  map_coordinates?: { x: number; y: number };
+  status?: 'active' | 'under-construction' | 'maintenance' | 'closed';
+  enterprise_id?: string;
+  enterprise_name?: string;
+  total_assets?: number;
+  open_work_orders?: number;
+  in_progress_work_orders?: number;
+  completed_work_orders?: number;
+  assets?: Asset[];
+  created_at: string;
+  updated_at: string;
+  created_by?: string;
+  created_by_name?: string;
 }
 
 // ============================================================================

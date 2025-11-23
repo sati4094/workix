@@ -36,6 +36,13 @@ export const API_CONFIG = {
     // Sites
     SITES: '/sites',
     
+    // Enterprises (replaces Clients)
+    ENTERPRISES: '/enterprises',
+    CLIENTS: '/clients', // Legacy alias
+    
+    // Buildings
+    BUILDINGS: '/buildings',
+    
     // PPM
     PPM_SCHEDULES: '/ppm/schedules',
     PPM_PLANS: '/ppm/plans',

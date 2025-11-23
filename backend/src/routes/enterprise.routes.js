@@ -1,0 +1,324 @@
+const express = require('express');
+const router = express.Router();
+const { query } = require('../database/connection');
+const { verifyToken, restrictTo } = require('../middlewares/auth');
+const { AppError, asyncHandler } = require('../middlewares/errorHandler');
+
+router.use(verifyToken);
+
+// Get all enterprises
+router.get('/', asyncHandler(async (req, res) => {
+  const { page = 1, limit = 50, search } = req.query;
+  const offset = (page - 1) * limit;
+
+  let countQuery = 'SELECT COUNT(*) as total FROM enterprises WHERE 1=1';
+  let dataQuery = `
+    SELECT 
+      e.*,
+      u.name as created_by_name,
+      COUNT(DISTINCT s.id) as total_sites,
+      COUNT(DISTINCT b.id) as total_buildings,
+      COUNT(DISTINCT a.id) as total_assets
+    FROM enterprises e
+    LEFT JOIN users u ON e.created_by = u.id
+    LEFT JOIN sites s ON s.enterprise_id = e.id
+    LEFT JOIN buildings b ON b.site_id = s.id
+    LEFT JOIN assets a ON a.building_id = b.id
+    WHERE 1=1
+  `;
+  
+  const queryParams = [];
+  let paramCount = 1;
+
+  if (search) {
+    const searchCondition = ` AND (e.name ILIKE $${paramCount} OR e.email ILIKE $${paramCount} OR e.industry ILIKE $${paramCount})`;
+    countQuery += searchCondition;
+    dataQuery += searchCondition;
+    queryParams.push(`%${search}%`);
+    paramCount++;
+  }
+
+  const countResult = await query(countQuery, queryParams);
+  const total = parseInt(countResult.rows[0].total);
+
+  dataQuery += ` GROUP BY e.id, u.name ORDER BY e.name ASC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
+  queryParams.push(limit, offset);
+
+  const result = await query(dataQuery, queryParams);
+
+  res.status(200).json({
+    success: true,
+    data: {
+      enterprises: result.rows,
+      pagination: { 
+        page: parseInt(page), 
+        limit: parseInt(limit), 
+        total, 
+        pages: Math.ceil(total / limit) 
+      },
+    },
+  });
+}));
+
+// Get enterprise by ID with full hierarchy
+router.get('/:id', asyncHandler(async (req, res) => {
+  const enterpriseResult = await query(
+    `SELECT 
+      e.*,
+      u.name as created_by_name,
+      COUNT(DISTINCT s.id) as total_sites,
+      COUNT(DISTINCT b.id) as total_buildings,
+      COUNT(DISTINCT a.id) as total_assets,
+      COUNT(DISTINCT wo.id) FILTER (WHERE wo.status = 'open') as open_work_orders,
+      COUNT(DISTINCT wo.id) FILTER (WHERE wo.status = 'in_progress') as in_progress_work_orders
+    FROM enterprises e
+    LEFT JOIN users u ON e.created_by = u.id
+    LEFT JOIN sites s ON s.enterprise_id = e.id
+    LEFT JOIN buildings b ON b.site_id = s.id
+    LEFT JOIN assets a ON a.building_id = b.id
+    LEFT JOIN work_orders wo ON wo.enterprise_id = e.id AND wo.deleted_at IS NULL
+    WHERE e.id = $1
+    GROUP BY e.id, u.name`,
+    [req.params.id]
+  );
+
+  if (enterpriseResult.rows.length === 0) {
+    throw new AppError('Enterprise not found', 404);
+  }
+
+  // Get sites for this enterprise
+  const sitesResult = await query(
+    `SELECT 
+      s.*,
+      COUNT(DISTINCT b.id) as building_count,
+      COUNT(DISTINCT a.id) as asset_count
+    FROM sites s
+    LEFT JOIN buildings b ON b.site_id = s.id
+    LEFT JOIN assets a ON a.building_id = b.id
+    WHERE s.enterprise_id = $1
+    GROUP BY s.id
+    ORDER BY s.name ASC`,
+    [req.params.id]
+  );
+
+  // Get active projects for this enterprise
+  const projectsResult = await query(
+    `SELECT p.*
+    FROM projects p
+    INNER JOIN project_enterprises pe ON pe.project_id = p.id
+    WHERE pe.enterprise_id = $1
+    ORDER BY p.start_date DESC
+    LIMIT 10`,
+    [req.params.id]
+  );
+
+  const enterprise = {
+    ...enterpriseResult.rows[0],
+    sites: sitesResult.rows,
+    projects: projectsResult.rows,
+  };
+
+  res.status(200).json({ success: true, data: { enterprise } });
+}));
+
+// Create enterprise
+router.post('/', restrictTo('admin', 'manager'), asyncHandler(async (req, res) => {
+  const { 
+    name, 
+    email,
+    phone,
+    industry,
+    website,
+    contact_person, 
+    contact_email, 
+    contact_phone, 
+    address, 
+    city, 
+    state, 
+    postal_code, 
+    country,
+    billing_address,
+    tax_id,
+    notes 
+  } = req.body;
+
+  if (!name) {
+    throw new AppError('Enterprise name is required', 400);
+  }
+
+  // Check for duplicate name
+  const duplicateCheck = await query(
+    'SELECT id FROM enterprises WHERE LOWER(name) = LOWER($1)',
+    [name]
+  );
+
+  if (duplicateCheck.rows.length > 0) {
+    throw new AppError('An enterprise with this name already exists', 409);
+  }
+
+  const result = await query(
+    `INSERT INTO enterprises (
+      organization_id,
+      name, 
+      email,
+      phone,
+      industry,
+      website,
+      contact_person, 
+      contact_email, 
+      contact_phone, 
+      address, 
+      city, 
+      state, 
+      postal_code, 
+      country,
+      billing_address,
+      tax_id,
+      notes, 
+      created_by
+    )
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
+    RETURNING *`,
+    [
+      req.user.organization_id || null,
+      name,
+      email,
+      phone,
+      industry,
+      website,
+      contact_person, 
+      contact_email, 
+      contact_phone, 
+      address, 
+      city, 
+      state, 
+      postal_code, 
+      country || 'UAE',
+      billing_address,
+      tax_id,
+      notes, 
+      req.user.id
+    ]
+  );
+
+  res.status(201).json({ 
+    success: true, 
+    message: 'Enterprise created successfully', 
+    data: { enterprise: result.rows[0] } 
+  });
+}));
+
+// Update enterprise
+router.patch('/:id', restrictTo('admin', 'manager'), asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const fields = [
+    'name', 
+    'email',
+    'phone',
+    'industry',
+    'website',
+    'contact_person', 
+    'contact_email', 
+    'contact_phone', 
+    'address', 
+    'city', 
+    'state', 
+    'postal_code', 
+    'country',
+    'billing_address',
+    'tax_id',
+    'status',
+    'notes'
+  ];
+
+  const updates = [];
+  const values = [];
+  let paramCount = 1;
+
+  fields.forEach(field => {
+    if (req.body[field] !== undefined) {
+      updates.push(`${field} = $${paramCount++}`);
+      values.push(req.body[field]);
+    }
+  });
+
+  if (updates.length === 0) {
+    throw new AppError('No fields to update', 400);
+  }
+
+  updates.push(`updated_at = CURRENT_TIMESTAMP`);
+  updates.push(`updated_by = $${paramCount++}`);
+  values.push(req.user.id);
+  values.push(id);
+
+  const result = await query(
+    `UPDATE enterprises SET ${updates.join(', ')} WHERE id = $${paramCount} RETURNING *`,
+    values
+  );
+
+  if (result.rows.length === 0) {
+    throw new AppError('Enterprise not found', 404);
+  }
+
+  res.status(200).json({ 
+    success: true, 
+    message: 'Enterprise updated successfully', 
+    data: { enterprise: result.rows[0] } 
+  });
+}));
+
+// Soft delete enterprise
+router.delete('/:id', restrictTo('admin'), asyncHandler(async (req, res) => {
+  const result = await query(
+    `UPDATE enterprises 
+    SET deleted_at = CURRENT_TIMESTAMP, updated_by = $1 
+    WHERE id = $2 
+    RETURNING id, name`,
+    [req.user.id, req.params.id]
+  );
+
+  if (result.rows.length === 0) {
+    throw new AppError('Enterprise not found', 404);
+  }
+
+  res.status(200).json({ 
+    success: true, 
+    message: `Enterprise "${result.rows[0].name}" deleted successfully` 
+  });
+}));
+
+// Get enterprise statistics
+router.get('/:id/stats', asyncHandler(async (req, res) => {
+  const statsResult = await query(
+    `SELECT 
+      COUNT(DISTINCT s.id) as total_sites,
+      COUNT(DISTINCT b.id) as total_buildings,
+      COUNT(DISTINCT a.id) as total_assets,
+      COUNT(DISTINCT wo.id) as total_work_orders,
+      COUNT(DISTINCT wo.id) FILTER (WHERE wo.status = 'open') as open_work_orders,
+      COUNT(DISTINCT wo.id) FILTER (WHERE wo.status = 'in_progress') as in_progress_work_orders,
+      COUNT(DISTINCT wo.id) FILTER (WHERE wo.status = 'completed') as completed_work_orders,
+      COUNT(DISTINCT p.id) as active_projects
+    FROM enterprises e
+    LEFT JOIN sites s ON s.enterprise_id = e.id
+    LEFT JOIN buildings b ON b.site_id = s.id
+    LEFT JOIN assets a ON a.building_id = b.id
+    LEFT JOIN work_orders wo ON wo.enterprise_id = e.id AND wo.deleted_at IS NULL
+    LEFT JOIN project_enterprises pe ON pe.enterprise_id = e.id
+    LEFT JOIN projects p ON p.id = pe.project_id AND p.status = 'active'
+    WHERE e.id = $1
+    GROUP BY e.id`,
+    [req.params.id]
+  );
+
+  if (statsResult.rows.length === 0) {
+    throw new AppError('Enterprise not found', 404);
+  }
+
+  res.status(200).json({
+    success: true,
+    data: { stats: statsResult.rows[0] }
+  });
+}));
+
+module.exports = router;

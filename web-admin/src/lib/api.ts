@@ -66,16 +66,27 @@ export const apiService = {
   
   deleteUser: (id: string) => api.delete(`/users/${id}`),
   
-  // Clients
-  getClients: (params?: any) => api.get('/clients', { params }),
+  // Enterprises (formerly Clients)
+  getEnterprises: (params?: any) => api.get('/enterprises', { params }),
   
-  getClientById: (id: string) => api.get(`/clients/${id}`),
+  getEnterpriseById: (id: string) => api.get(`/enterprises/${id}`),
   
-  createClient: (data: any) => api.post('/clients', data),
+  createEnterprise: (data: any) => api.post('/enterprises', data),
   
-  updateClient: (id: string, data: any) => api.patch(`/clients/${id}`, data),
+  updateEnterprise: (id: string, data: any) => api.patch(`/enterprises/${id}`, data),
   
-  deleteClient: (id: string) => api.delete(`/clients/${id}`),
+  deleteEnterprise: (id: string) => api.delete(`/enterprises/${id}`),
+  
+  // Legacy Clients methods (for backward compatibility)
+  getClients: (params?: any) => api.get('/enterprises', { params }),
+  
+  getClientById: (id: string) => api.get(`/enterprises/${id}`),
+  
+  createClient: (data: any) => api.post('/enterprises', data),
+  
+  updateClient: (id: string, data: any) => api.patch(`/enterprises/${id}`, data),
+  
+  deleteClient: (id: string) => api.delete(`/enterprises/${id}`),
   
   // Projects
   getProjects: (params?: any) => api.get('/projects', { params }),
@@ -85,6 +96,17 @@ export const apiService = {
   createProject: (data: any) => api.post('/projects', data),
   
   updateProject: (id: string, data: any) => api.patch(`/projects/${id}`, data),
+  
+  // Buildings
+  getBuildings: (params?: any) => api.get('/buildings', { params }),
+  
+  getBuildingById: (id: string) => api.get(`/buildings/${id}`),
+  
+  createBuilding: (data: any) => api.post('/buildings', data),
+  
+  updateBuilding: (id: string, data: any) => api.patch(`/buildings/${id}`, data),
+  
+  deleteBuilding: (id: string) => api.delete(`/buildings/${id}`),
   
   // Sites
   getSites: (params?: any) => api.get('/sites', { params }),

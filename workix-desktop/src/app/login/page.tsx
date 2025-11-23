@@ -56,7 +56,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-purple-600 via-pink-500 to-purple-800 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="bg-white rounded-lg shadow-lg p-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Workix</h1>
@@ -120,7 +120,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition disabled:opacity-50"
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-medium py-2 px-4 rounded-lg transition disabled:opacity-50 shadow-lg"
             >
               {loading ? 'Processing...' : isLogin ? 'Sign In' : 'Create Account'}
             </button>
@@ -137,7 +137,7 @@ export default function LoginPage() {
                   setPassword('');
                   setName('');
                 }}
-                className="text-blue-600 hover:text-blue-700 font-medium ml-1"
+                className="text-purple-600 hover:text-purple-700 font-medium ml-1"
               >
                 {isLogin ? 'Sign Up' : 'Sign In'}
               </button>

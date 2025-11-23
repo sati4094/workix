@@ -8,16 +8,17 @@ router.use(verifyToken);
 
 // Get all projects
 router.get('/', asyncHandler(async (req, res) => {
-  const { client_id, status, page = 1, limit = 50 } = req.query;
+  const { enterprise_id, client_id, status, page = 1, limit = 50 } = req.query;
   const offset = (page - 1) * limit;
 
   const conditions = [];
   const values = [];
   let paramCount = 1;
 
-  if (client_id) {
-    conditions.push(`p.client_id = $${paramCount++}`);
-    values.push(client_id);
+  // Support both enterprise_id and client_id for backward compatibility
+  if (enterprise_id || client_id) {
+    conditions.push(`p.enterprise_id = $${paramCount++}`);
+    values.push(enterprise_id || client_id);
   }
   if (status) {
     conditions.push(`p.status = $${paramCount++}`);
@@ -30,10 +31,10 @@ router.get('/', asyncHandler(async (req, res) => {
   const total = parseInt(countResult.rows[0].total);
 
   const result = await query(
-    `SELECT p.*, c.name as client_name, u.name as project_manager_name,
-      (SELECT COUNT(*) FROM sites WHERE project_id = p.id) as site_count
+    `SELECT p.*, e.name as enterprise_name, e.name as client_name, u.name as project_manager_name,
+      0 as site_count
      FROM projects p
-     JOIN clients c ON p.client_id = c.id
+     LEFT JOIN enterprises e ON p.enterprise_id = e.id
      LEFT JOIN users u ON p.project_manager_id = u.id
      ${whereClause}
      ORDER BY p.created_at DESC
@@ -53,12 +54,11 @@ router.get('/', asyncHandler(async (req, res) => {
 // Get project by ID
 router.get('/:id', asyncHandler(async (req, res) => {
   const result = await query(
-    `SELECT p.*, c.name as client_name, c.contact_person, c.contact_phone,
+    `SELECT p.*, e.name as enterprise_name, e.name as client_name, e.contact_person, e.contact_phone,
       u.name as project_manager_name,
-      (SELECT json_agg(json_build_object('id', s.id, 'name', s.name, 'address', s.address))
-       FROM sites s WHERE s.project_id = p.id) as sites
+      '[]'::json as sites
      FROM projects p
-     JOIN clients c ON p.client_id = c.id
+     LEFT JOIN enterprises e ON p.enterprise_id = e.id
      LEFT JOIN users u ON p.project_manager_id = u.id
      WHERE p.id = $1`,
     [req.params.id]
@@ -74,20 +74,21 @@ router.get('/:id', asyncHandler(async (req, res) => {
 // Create project
 router.post('/', restrictTo('admin', 'manager'), asyncHandler(async (req, res) => {
   const {
-    name, client_id, contract_number, contract_start_date, contract_end_date,
+    name, enterprise_id, client_id, contract_number, contract_start_date, contract_end_date,
     contract_value, project_manager_id, description, performance_baseline, status
   } = req.body;
 
-  if (!name || !client_id) {
-    throw new AppError('Project name and client are required', 400);
+  const actualEnterpriseId = enterprise_id || client_id;
+  if (!name || !actualEnterpriseId) {
+    throw new AppError('Project name and enterprise are required', 400);
   }
 
   const result = await query(
-    `INSERT INTO projects (name, client_id, contract_number, contract_start_date, contract_end_date,
+    `INSERT INTO projects (name, enterprise_id, contract_number, contract_start_date, contract_end_date,
       contract_value, project_manager_id, description, performance_baseline, status, created_by)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
      RETURNING *`,
-    [name, client_id, contract_number, contract_start_date, contract_end_date, contract_value,
+    [name, actualEnterpriseId, contract_number, contract_start_date, contract_end_date, contract_value,
       project_manager_id, description, performance_baseline ? JSON.stringify(performance_baseline) : null,
       status || 'active', req.user.id]
   );

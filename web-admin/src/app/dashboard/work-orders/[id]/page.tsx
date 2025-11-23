@@ -151,19 +151,19 @@ export default function WorkOrderDetailPage({ params }: { params: { id: string }
             </CardContent>
           </Card>
 
-          {/* Site & Client Info */}
+          {/* Location Info */}
           <Card>
             <CardHeader>
-              <CardTitle>Site & Client Information</CardTitle>
+              <CardTitle>Location Information</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-sm text-gray-600">Client</p>
-                  <p className="font-medium">{wo.client_name}</p>
-                  {wo.client_contact_person && (
+                  <p className="text-sm text-gray-600">Enterprise</p>
+                  <p className="font-medium">{wo.enterprise_name || wo.client_name || '-'}</p>
+                  {wo.enterprise_contact_person && (
                     <p className="text-sm text-gray-600 mt-1">
-                      {wo.client_contact_person} • {wo.client_contact_phone}
+                      {wo.enterprise_contact_person} • {wo.enterprise_contact_phone}
                     </p>
                   )}
                 </div>
@@ -177,6 +177,15 @@ export default function WorkOrderDetailPage({ params }: { params: { id: string }
                     </p>
                   )}
                 </div>
+                {wo.building_name && (
+                  <div>
+                    <p className="text-sm text-gray-600">Building</p>
+                    <p className="font-medium">{wo.building_name}</p>
+                    {wo.building_code && (
+                      <p className="text-sm text-gray-600">{wo.building_code}</p>
+                    )}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

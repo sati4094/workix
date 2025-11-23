@@ -9,7 +9,7 @@ import { DataTable } from '@/components/DataTable';
 import { CrudModal } from '@/components/CrudModal';
 import { SearchFilter } from '@/components/SearchFilter';
 import { DeleteConfirmation } from '@/components/DeleteConfirmation';
-import { useWorkOrders, useCreateWorkOrder, useUpdateWorkOrder, useDeleteWorkOrder, useClients, useProjects, useSites, useAssets, useUsers } from '@/hooks/useApi';
+import { useWorkOrders, useCreateWorkOrder, useUpdateWorkOrder, useDeleteWorkOrder, useEnterprises, useProjects, useSites, useAssets, useUsers } from '@/hooks/useApi';
 import { workOrderSchema } from '@/lib/validation';
 import type { WorkOrder, CreateWorkOrderDTO } from '@/types';
 import LocationSelector from '@/components/LocationSelector';
@@ -23,7 +23,7 @@ export default function WorkOrdersPage() {
   const [priorityFilter, setPriorityFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [selectedClient, setSelectedClient] = useState<string>('');
+  const [selectedEnterprise, setSelectedEnterprise] = useState<string>('');
   const [locationData, setLocationData] = useState({
     siteId: '',
     buildingId: 0,
@@ -33,7 +33,7 @@ export default function WorkOrdersPage() {
 
   // React Query hooks
   const { data: workOrders = [], isLoading } = useWorkOrders();
-  const { data: clients = [] } = useClients();
+  const { data: enterprises = [] } = useEnterprises();
   const { data: projects = [] } = useProjects();
   const { data: sites = [] } = useSites();
   const { data: assets = [] } = useAssets();
@@ -42,22 +42,19 @@ export default function WorkOrdersPage() {
   const updateMutation = useUpdateWorkOrder();
   const deleteMutation = useDeleteWorkOrder();
   
-  // Filter sites based on selected client (sites are linked through projects)
+  // Filter sites based on selected enterprise
   const filteredSites = useMemo(() => {
-    if (!selectedClient) return sites;
-    // Get projects for selected client
-    const clientProjects = projects.filter(p => p.client_id === selectedClient);
-    const projectIds = clientProjects.map(p => p.id);
-    // Filter sites that belong to these projects
-    return sites.filter(site => projectIds.includes(site.project_id));
-  }, [sites, projects, selectedClient]);
+    if (!selectedEnterprise) return sites;
+    // Filter sites that belong to the selected enterprise
+    return sites.filter(site => site.enterprise_id === selectedEnterprise);
+  }, [sites, selectedEnterprise]);
 
   // Form setup with Zod validation
   const form = useForm<any>({
     defaultValues: {
       title: '',
       description: '',
-      client_id: '',
+      enterprise_id: '',
       site_id: '',
       building_id: 0,
       floor_id: 0,
@@ -101,12 +98,12 @@ export default function WorkOrdersPage() {
   const handleCreate = () => {
     setEditingWorkOrder(null);
     setSelectedFiles([]);
-    setSelectedClient('');
+    setSelectedEnterprise('');
     setLocationData({ siteId: '', buildingId: 0, floorId: 0, spaceId: 0 });
     form.reset({
       title: '',
       description: '',
-      client_id: '',
+      enterprise_id: '',
       site_id: '',
       building_id: 0,
       floor_id: 0,
@@ -126,7 +123,7 @@ export default function WorkOrdersPage() {
   const handleEdit = (workOrder: WorkOrder) => {
     setEditingWorkOrder(workOrder);
     setSelectedFiles([]);
-    setSelectedClient(workOrder.client_id || '');
+    setSelectedEnterprise(workOrder.enterprise_id || '');
     
     // Load location data if available
     setLocationData({
@@ -139,7 +136,7 @@ export default function WorkOrdersPage() {
     form.reset({
       title: workOrder.title,
       description: workOrder.description || '',
-      client_id: workOrder.client_id || '',
+      enterprise_id: workOrder.enterprise_id || '',
       site_id: workOrder.site_id || '',
       building_id: (workOrder as any).building_id || 0,
       floor_id: (workOrder as any).floor_id || 0,
@@ -218,7 +215,7 @@ export default function WorkOrdersPage() {
   // Status badge helper
   const getStatusBadge = (status: string) => {
     const colors = {
-      Open: 'bg-blue-100 text-blue-800',
+      Open: 'bg-purple-100 text-purple-800',
       'In Progress': 'bg-yellow-100 text-yellow-800',
       'On Hold': 'bg-orange-100 text-orange-800',
       Completed: 'bg-green-100 text-green-800',
@@ -238,7 +235,7 @@ export default function WorkOrdersPage() {
           </div>
           <button
             onClick={handleCreate}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all shadow-md"
           >
             + New Work Order
           </button>
@@ -299,6 +296,20 @@ export default function WorkOrdersPage() {
               ),
             },
             {
+              key: 'enterprise_name',
+              label: 'Enterprise',
+              render: (_, wo: WorkOrder) => (
+                <span className="text-sm">{wo.enterprise_name || '-'}</span>
+              ),
+            },
+            {
+              key: 'site_name',
+              label: 'Site',
+              render: (_, wo: WorkOrder) => (
+                <span className="text-sm">{wo.site_name || '-'}</span>
+              ),
+            },
+            {
               key: 'priority',
               label: 'Priority',
               render: (_, wo: WorkOrder) => (
@@ -332,7 +343,7 @@ export default function WorkOrdersPage() {
                   e.stopPropagation();
                   handleEdit(wo);
                 }}
-                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                className="text-purple-600 hover:text-purple-800 text-sm font-medium"
               >
                 Edit
               </button>
@@ -393,26 +404,26 @@ export default function WorkOrdersPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Client <span className="text-red-500">*</span>
+                Enterprise <span className="text-red-500">*</span>
               </label>
               <select
-                {...form.register('client_id')}
+                {...form.register('enterprise_id')}
                 onChange={(e) => {
-                  setSelectedClient(e.target.value);
-                  form.setValue('client_id', e.target.value);
-                  form.setValue('site_id', ''); // Reset site when client changes
+                  setSelectedEnterprise(e.target.value);
+                  form.setValue('enterprise_id', e.target.value);
+                  form.setValue('site_id', ''); // Reset site when enterprise changes
                 }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               >
-                <option value="">Select Client</option>
-                {clients.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.name}
+                <option value="">Select Enterprise</option>
+                {enterprises.map((enterprise) => (
+                  <option key={enterprise.id} value={enterprise.id}>
+                    {enterprise.name}
                   </option>
                 ))}
               </select>
-              {form.formState.errors.client_id && (
-                <p className="text-red-500 text-sm mt-1">{form.formState.errors.client_id.message}</p>
+              {form.formState.errors.enterprise_id && (
+                <p className="text-red-500 text-sm mt-1">{form.formState.errors.enterprise_id.message}</p>
               )}
             </div>
 
@@ -423,7 +434,7 @@ export default function WorkOrdersPage() {
               <select
                 {...form.register('site_id')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                disabled={!selectedClient && !form.watch('client_id')}
+                disabled={!selectedEnterprise && !form.watch('enterprise_id')}
               >
                 <option value="">Select Site</option>
                 {filteredSites.map((site) => (

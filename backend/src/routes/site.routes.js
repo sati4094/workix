@@ -11,7 +11,7 @@ router.get('/', asyncHandler(async (req, res) => {
   const { project_id, page = 1, limit = 50 } = req.query;
   const offset = (page - 1) * limit;
 
-  const conditions = project_id ? 'WHERE s.project_id = $1' : '';
+  const conditions = project_id ? 'WHERE s.portfolio_id = $1' : '';
   const values = project_id ? [project_id] : [];
 
   const countResult = await query(`SELECT COUNT(*) as total FROM sites s ${conditions}`, values);
@@ -19,11 +19,12 @@ router.get('/', asyncHandler(async (req, res) => {
 
   const paramCount = values.length + 1;
   const result = await query(
-    `SELECT s.*, p.name as project_name, c.name as client_name,
+    `SELECT s.*, p.name as portfolio_name, e.name as enterprise_name, e.id as enterprise_id,
+      (SELECT COUNT(*) FROM buildings WHERE site_id = s.id) as building_count,
       (SELECT COUNT(*) FROM assets WHERE site_id = s.id) as asset_count
      FROM sites s
-     JOIN projects p ON s.project_id = p.id
-     JOIN clients c ON p.client_id = c.id
+     LEFT JOIN portfolios p ON s.portfolio_id = p.id
+     LEFT JOIN enterprises e ON s.enterprise_id = e.id
      ${conditions}
      ORDER BY s.name ASC
      LIMIT $${paramCount} OFFSET $${paramCount + 1}`,
@@ -42,12 +43,14 @@ router.get('/', asyncHandler(async (req, res) => {
 // Get site by ID
 router.get('/:id', asyncHandler(async (req, res) => {
   const result = await query(
-    `SELECT s.*, p.name as project_name, c.name as client_name,
-      (SELECT json_agg(json_build_object('id', a.id, 'name', a.name, 'asset_tag', a.asset_tag, 'type', a.type, 'status', a.status))
+    `SELECT s.*, p.name as portfolio_name, e.name as enterprise_name, e.id as enterprise_id,
+      (SELECT json_agg(json_build_object('id', b.id, 'name', b.name, 'building_code', b.building_code, 'floors', b.floors, 'status', b.status))
+       FROM buildings b WHERE b.site_id = s.id) as buildings,
+      (SELECT json_agg(json_build_object('id', a.id, 'name', a.name, 'asset_tag', a.asset_tag, 'category', a.category, 'status', a.status))
        FROM assets a WHERE a.site_id = s.id) as assets
      FROM sites s
-     JOIN projects p ON s.project_id = p.id
-     JOIN clients c ON p.client_id = c.id
+     LEFT JOIN portfolios p ON s.portfolio_id = p.id
+     LEFT JOIN enterprises e ON s.enterprise_id = e.id
      WHERE s.id = $1`,
     [req.params.id]
   );

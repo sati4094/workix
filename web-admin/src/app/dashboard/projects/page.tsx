@@ -13,7 +13,7 @@ import { formatDate } from '@/lib/utils'
 export default function ProjectsPage() {
   const router = useRouter()
   const [projects, setProjects] = useState<any[]>([])
-  const [clients, setClients] = useState<any[]>([])
+  const [enterprises, setEnterprises] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [showModal, setShowModal] = useState(false)
@@ -25,12 +25,12 @@ export default function ProjectsPage() {
   const fetchData = async () => {
     try {
       setLoading(true)
-      const [projectsRes, clientsRes]: any = await Promise.all([
+      const [projectsRes, enterprisesRes]: any = await Promise.all([
         apiService.getProjects({ limit: 100 }),
-        apiService.getClients({ limit: 100 })
+        apiService.getEnterprises({ limit: 100 })
       ])
       setProjects(projectsRes.data.projects || [])
-      setClients(clientsRes.data.clients || [])
+      setEnterprises(enterprisesRes.data.enterprises || [])
     } catch (error) {
       console.error('Failed to fetch data:', error)
     } finally {
@@ -43,6 +43,7 @@ export default function ProjectsPage() {
     const query = searchQuery.toLowerCase()
     return (
       p.name?.toLowerCase().includes(query) ||
+      p.enterprise_name?.toLowerCase().includes(query) ||
       p.client_name?.toLowerCase().includes(query) ||
       p.contract_number?.toLowerCase().includes(query)
     )
@@ -87,7 +88,7 @@ export default function ProjectsPage() {
                 <div className="flex justify-between items-start">
                   <div>
                     <CardTitle className="text-xl mb-2">{project.name}</CardTitle>
-                    <p className="text-sm text-gray-600">Client: {project.client_name}</p>
+                    <p className="text-sm text-gray-600">Enterprise: {project.enterprise_name || project.client_name}</p>
                     {project.contract_number && (
                       <p className="text-sm text-gray-600">Contract: {project.contract_number}</p>
                     )}
@@ -136,7 +137,7 @@ export default function ProjectsPage() {
 
       {showModal && (
         <ProjectModal
-          clients={clients}
+          enterprises={enterprises}
           onClose={() => setShowModal(false)}
           onSuccess={() => {
             setShowModal(false)

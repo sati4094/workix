@@ -19,7 +19,7 @@ export default function SettingsPage() {
           <div className="md:col-span-1">
             <div className="bg-white p-6 rounded-lg shadow space-y-4">
               <h2 className="text-lg font-semibold">Profile</h2>
-              <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center text-white text-2xl">
+              <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white text-2xl shadow-lg">
                 {user?.name?.charAt(0) || 'U'}
               </div>
               <div>
@@ -75,7 +75,7 @@ export default function SettingsPage() {
                     className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
-                <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save Settings</button>
+                <button className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded hover:from-purple-700 hover:to-pink-700 shadow-md">Save Settings</button>
               </div>
             </div>
           </div>

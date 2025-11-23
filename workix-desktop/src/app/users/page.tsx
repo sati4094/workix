@@ -34,7 +34,7 @@ export default function UsersPage() {
             <h1 className="text-3xl font-bold text-gray-900">Users</h1>
             <p className="text-gray-600 mt-2">Manage team members and their permissions</p>
           </div>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">+ Add User</button>
+          <button className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded hover:from-purple-700 hover:to-pink-700 shadow-md">+ Add User</button>
         </div>
 
         {loading ? (

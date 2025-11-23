@@ -145,7 +145,7 @@ export default function AnalyticsPage() {
             trend="up"
             trendValue={`${kpis?.completion_rate || 0}% completion`}
             icon={<Wrench className="w-6 h-6" />}
-            gradient="from-blue-500 to-blue-600"
+            gradient="from-purple-500 to-pink-600"
             loading={dashboardLoading || dashboardFetching}
           />
           <KPICard
@@ -183,7 +183,7 @@ export default function AnalyticsPage() {
           {realTimeLoading || realTimeFetching ? (
             [...Array(6)].map((_, idx) => (
               <div className="flex flex-col items-center justify-center min-h-16" key={idx}>
-                <div className="h-6 w-6 animate-spin rounded-full border-t-2 border-b-2 border-blue-400 mb-2"></div>
+                <div className="h-6 w-6 animate-spin rounded-full border-t-2 border-b-2 border-purple-400 mb-2"></div>
                 <div className="h-3 bg-gray-200 w-14 rounded"></div>
               </div>
             ))
@@ -195,7 +195,7 @@ export default function AnalyticsPage() {
               </div>
               <div className="text-center">
                 <p className="text-sm text-gray-600 mb-1">Active</p>
-                <p className="text-2xl font-bold text-blue-600">{realTime.active_count || 0}</p>
+                <p className="text-2xl font-bold text-purple-600">{realTime.active_count || 0}</p>
               </div>
               <div className="text-center">
                 <p className="text-sm text-gray-600 mb-1">Critical Open</p>

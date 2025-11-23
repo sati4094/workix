@@ -13,9 +13,10 @@ const { errorHandler } = require('./middlewares/errorHandler');
 // Import routes
 const authRoutes = require('./routes/auth.routes');
 const userRoutes = require('./routes/user.routes');
-const clientRoutes = require('./routes/client.routes');
+const enterpriseRoutes = require('./routes/enterprise.routes'); // Renamed from client
 const projectRoutes = require('./routes/project.routes');
 const siteRoutes = require('./routes/site.routes');
+const buildingRoutes = require('./routes/building.routes'); // New building layer
 const assetRoutes = require('./routes/asset.routes');
 const workOrderRoutes = require('./routes/workOrder.routes');
 const ppmRoutes = require('./routes/ppm.routes');
@@ -27,8 +28,7 @@ const inventoryRoutes = require('./routes/inventory.routes');
 const attachmentRoutes = require('./routes/attachment.routes');
 const notificationRoutes = require('./routes/notification.routes');
 
-// Enterprise routes
-const buildingsRoutes = require('./routes/buildings.routes');
+// Additional enterprise routes
 const floorsRoutes = require('./routes/floors.routes');
 const spacesRoutes = require('./routes/spaces.routes');
 const partsRoutes = require('./routes/parts.routes');
@@ -36,8 +36,10 @@ const storeroomsRoutes = require('./routes/storerooms.routes');
 const vendorsRoutes = require('./routes/vendors.routes');
 const teamsRoutes = require('./routes/teams.routes');
 const rolesRoutes = require('./routes/roles.routes');
+const permissionsRoutes = require('./routes/permissions.routes');
 const assetCategoriesRoutes = require('./routes/asset-categories.routes');
 const assetTypesRoutes = require('./routes/asset-types.routes');
+const syncRoutes = require('./routes/sync.routes');
 
 const path = require('path');
 
@@ -84,11 +86,21 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // Compression middleware
 app.use(compression());
 
-// Rate limiting
+// Rate limiting (more permissive for development)
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
-  message: 'Too many requests from this IP, please try again later.'
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 1000, // Increased from 100 to 1000
+  message: 'Too many requests from this IP, please try again later.',
+  standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
+  legacyHeaders: false, // Disable `X-RateLimit-*` headers
+  skip: (req) => {
+    // Skip rate limiting in development environment
+    if (process.env.NODE_ENV === 'development') {
+      return true;
+    }
+    // Skip for health checks
+    return req.path === '/health';
+  }
 });
 app.use(`/api/${API_VERSION}/`, limiter);
 
@@ -105,9 +117,11 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use(`/api/${API_VERSION}/auth`, authRoutes);
 app.use(`/api/${API_VERSION}/users`, userRoutes);
-app.use(`/api/${API_VERSION}/clients`, clientRoutes);
+app.use(`/api/${API_VERSION}/enterprises`, enterpriseRoutes); // Renamed from /clients
+app.use(`/api/${API_VERSION}/clients`, enterpriseRoutes); // Legacy alias for backward compatibility
 app.use(`/api/${API_VERSION}/projects`, projectRoutes);
 app.use(`/api/${API_VERSION}/sites`, siteRoutes);
+app.use(`/api/${API_VERSION}/buildings`, buildingRoutes); // New building layer
 app.use(`/api/${API_VERSION}/assets`, assetRoutes);
 app.use(`/api/${API_VERSION}/work-orders`, workOrderRoutes);
 app.use(`/api/${API_VERSION}/ppm`, ppmRoutes);
@@ -119,8 +133,7 @@ app.use(`/api/${API_VERSION}/inventory`, inventoryRoutes);
 app.use(`/api/${API_VERSION}/attachments`, attachmentRoutes);
 app.use(`/api/${API_VERSION}/notifications`, notificationRoutes);
 
-// Enterprise routes
-app.use(`/api/${API_VERSION}/buildings`, buildingsRoutes);
+// Additional enterprise routes
 app.use(`/api/${API_VERSION}/floors`, floorsRoutes);
 app.use(`/api/${API_VERSION}/spaces`, spacesRoutes);
 app.use(`/api/${API_VERSION}/parts`, partsRoutes);
@@ -128,8 +141,10 @@ app.use(`/api/${API_VERSION}/storerooms`, storeroomsRoutes);
 app.use(`/api/${API_VERSION}/vendors`, vendorsRoutes);
 app.use(`/api/${API_VERSION}/teams`, teamsRoutes);
 app.use(`/api/${API_VERSION}/roles`, rolesRoutes);
+app.use(`/api/${API_VERSION}/permissions`, permissionsRoutes);
 app.use(`/api/${API_VERSION}/asset-categories`, assetCategoriesRoutes);
 app.use(`/api/${API_VERSION}/asset-types`, assetTypesRoutes);
+app.use(`/api/${API_VERSION}/sync`, syncRoutes);
 
 // 404 handler
 app.use((req, res) => {
@@ -168,13 +183,19 @@ async function startServer() {
 // Handle uncaught exceptions
 process.on('uncaughtException', (error) => {
   logger.error('Uncaught Exception:', error);
-  process.exit(1);
+  // Don't exit immediately in development
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  }
 });
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (reason, promise) => {
   logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-  process.exit(1);
+  // Don't exit immediately in development - log and continue
+  if (process.env.NODE_ENV === 'production') {
+    process.exit(1);
+  }
 });
 
 // Graceful shutdown

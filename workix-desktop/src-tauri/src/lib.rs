@@ -104,6 +104,7 @@ fn get_system_info() -> ApiResponse<serde_json::Value> {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_sql::Builder::default().build())
         .invoke_handler(tauri::generate_handler![
             get_app_version,
             get_app_info,

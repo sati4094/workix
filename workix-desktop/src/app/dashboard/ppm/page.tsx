@@ -67,7 +67,7 @@ export default function PPMPage() {
   };
 
   const getFrequencyBadge = (frequency: string) => {
-    const colors = { daily: 'bg-red-100 text-red-800', weekly: 'bg-orange-100 text-orange-800', monthly: 'bg-blue-100 text-blue-800', quarterly: 'bg-purple-100 text-purple-800', annually: 'bg-gray-100 text-gray-800' };
+    const colors = { daily: 'bg-red-100 text-red-800', weekly: 'bg-orange-100 text-orange-800', monthly: 'bg-purple-100 text-purple-800', quarterly: 'bg-purple-100 text-purple-800', annually: 'bg-gray-100 text-gray-800' };
     return colors[frequency as keyof typeof colors] || 'bg-gray-100 text-gray-800';
   };
 
@@ -79,7 +79,7 @@ export default function PPMPage() {
             <h1 className="text-3xl font-bold text-gray-900">PPM Schedules</h1>
             <p className="text-gray-600 mt-2">Planned Preventive Maintenance scheduling</p>
           </div>
-          <button onClick={handleCreate} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">+ New Schedule</button>
+          <button onClick={handleCreate} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all shadow-md">+ New Schedule</button>
         </div>
 
         <SearchFilter onSearchChange={setSearchTerm} searchPlaceholder="Search schedules..." filters={[
@@ -93,7 +93,7 @@ export default function PPMPage() {
           { key: 'frequency', label: 'Frequency', render: (_: any, s: PPMSchedule) => <span className={`px-3 py-1 rounded-full text-sm font-medium ${getFrequencyBadge(s.frequency || '')}`}>{s.frequency || '-'}</span> },
           { key: 'frequency_value', label: 'Interval', render: (_: any, s: PPMSchedule) => <span className="text-sm">Every {s.frequency_value}</span> },
           { key: 'is_active', label: 'Status', render: (_: any, s: PPMSchedule) => <span className={`px-3 py-1 rounded-full text-sm font-medium ${s.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>{s.is_active ? 'Active' : 'Inactive'}</span> },
-        ]} actions={(s: PPMSchedule) => (<><button onClick={(e) => { e.stopPropagation(); handleEdit(s); }} className="text-blue-600 hover:text-blue-800 text-sm font-medium">Edit</button><button onClick={(e) => { e.stopPropagation(); setDeleteSchedule(s); }} className="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button></>)} />
+        ]} actions={(s: PPMSchedule) => (<><button onClick={(e) => { e.stopPropagation(); handleEdit(s); }} className="text-purple-600 hover:text-purple-800 text-sm font-medium">Edit</button><button onClick={(e) => { e.stopPropagation(); setDeleteSchedule(s); }} className="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button></>)} />
       </div>
 
       <CrudModal isOpen={isModalOpen} title={editingSchedule ? 'Edit Schedule' : 'New Schedule'} onClose={() => setIsModalOpen(false)} onSubmit={handleSubmit} submitText={editingSchedule ? 'Update' : 'Create'} isSubmitting={createMutation.isPending || updateMutation.isPending} size="lg">
@@ -139,7 +139,7 @@ export default function PPMPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <input {...form.register('is_active')} type="checkbox" className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500" />
+            <input {...form.register('is_active')} type="checkbox" className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500" />
             <label className="text-sm font-medium text-gray-700">Active Schedule</label>
           </div>
         </div>

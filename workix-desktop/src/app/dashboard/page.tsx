@@ -76,7 +76,7 @@ export default function DashboardPage() {
           </div>
           <p className="text-sm text-gray-600">{description}</p>
         </div>
-        <span className="text-gray-400 group-hover:text-blue-600 transition-colors">→</span>
+        <span className="text-gray-400 group-hover:text-purple-600 transition-colors">→</span>
       </div>
     </div>
   );
@@ -99,7 +99,7 @@ export default function DashboardPage() {
         {loading ? (
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mb-4"></div>
               <p className="text-gray-600">Loading dashboard...</p>
             </div>
           </div>
@@ -122,7 +122,7 @@ export default function DashboardPage() {
                   description="Create and manage work orders" 
                   icon="📋" 
                   href="/work-orders"
-                  color="border-blue-500"
+                  color="border-purple-500"
                 />
                 <FeatureCard 
                   title="Assets" 

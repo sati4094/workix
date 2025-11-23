@@ -49,8 +49,8 @@ exports.getAllWorkOrders = asyncHandler(async (req, res) => {
     conditions.push(`wo.assigned_to = $${paramCount++}`);
     values.push(req.user.id);
   } else if (req.user.role === 'client') {
-    // Clients can only see work orders for their projects
-    conditions.push(`p.client_id IN (SELECT id FROM clients WHERE contact_email = $${paramCount++})`);
+    // Enterprises can only see their own work orders
+    conditions.push(`wo.enterprise_id IN (SELECT id FROM enterprises WHERE contact_email = $${paramCount++})`);
     values.push(req.user.email);
   }
 
@@ -65,8 +65,8 @@ exports.getAllWorkOrders = asyncHandler(async (req, res) => {
   const countResult = await query(
     `SELECT COUNT(*) as total 
      FROM work_orders wo
-     JOIN sites s ON wo.site_id = s.id
-     JOIN projects p ON s.project_id = p.id
+     LEFT JOIN sites s ON wo.site_id = s.id
+     LEFT JOIN portfolios p ON s.portfolio_id = p.id
      ${whereClause}`,
     values
   );
@@ -79,22 +79,25 @@ exports.getAllWorkOrders = asyncHandler(async (req, res) => {
       wo.*,
       s.name as site_name,
       s.address as site_address,
-      p.name as project_name,
-      c.name as client_name,
+      s.facility_code as site_code,
+      b.name as building_name,
+      b.building_code,
+      p.name as portfolio_name,
+      e.name as enterprise_name,
+      e.id as enterprise_id,
       assigned_user.name as assigned_technician_name,
       assigned_user.phone as assigned_technician_phone,
       reported_user.name as reported_by_name,
       (SELECT COUNT(*) FROM work_order_activities WHERE work_order_id = wo.id) as activity_count,
-      (SELECT json_agg(json_build_object('id', a.id, 'name', a.name, 'asset_tag', a.asset_tag, 'type', a.type))
-       FROM assets a
-       JOIN work_order_assets woa ON a.id = woa.asset_id
-       WHERE woa.work_order_id = wo.id) as assets
+      (SELECT json_agg(json_build_object('id', a.id, 'name', a.name, 'asset_tag', a.asset_tag, 'category', a.category))
+       FROM assets a WHERE a.id = wo.asset_id) as assets
      FROM work_orders wo
-     JOIN sites s ON wo.site_id = s.id
-     JOIN projects p ON s.project_id = p.id
-     JOIN clients c ON p.client_id = c.id
+     LEFT JOIN sites s ON wo.site_id = s.id
+     LEFT JOIN buildings b ON wo.building_id = b.id
+     LEFT JOIN portfolios p ON s.portfolio_id = p.id
+     LEFT JOIN enterprises e ON wo.enterprise_id = e.id
      LEFT JOIN users assigned_user ON wo.assigned_to = assigned_user.id
-     LEFT JOIN users reported_user ON wo.reported_by = reported_user.id
+     LEFT JOIN users reported_user ON wo.requested_by = reported_user.id
      ${whereClause}
      ORDER BY wo.${sortColumn} ${sortOrder}
      LIMIT $${paramCount++} OFFSET $${paramCount++}`,
@@ -126,10 +129,13 @@ exports.getWorkOrderById = asyncHandler(async (req, res) => {
       s.address as site_address,
       s.contact_person as site_contact_person,
       s.contact_phone as site_contact_phone,
+      b.name as building_name,
+      b.building_code,
       p.name as project_name,
-      c.name as client_name,
-      c.contact_person as client_contact_person,
-      c.contact_phone as client_contact_phone,
+      e.name as enterprise_name,
+      e.name as client_name,
+      e.contact_person as client_contact_person,
+      e.contact_phone as client_contact_phone,
       assigned_user.name as assigned_technician_name,
       assigned_user.phone as assigned_technician_phone,
       assigned_user.email as assigned_technician_email,
@@ -138,7 +144,7 @@ exports.getWorkOrderById = asyncHandler(async (req, res) => {
         'id', a.id, 
         'name', a.name, 
         'asset_tag', a.asset_tag, 
-        'type', a.type,
+        'category', a.category,
         'model', a.model,
         'manufacturer', a.manufacturer
       ))
@@ -159,11 +165,12 @@ exports.getWorkOrderById = asyncHandler(async (req, res) => {
        LEFT JOIN users u ON woa.created_by = u.id
        WHERE woa.work_order_id = wo.id) as activities
      FROM work_orders wo
-     JOIN sites s ON wo.site_id = s.id
-     JOIN projects p ON s.project_id = p.id
-     JOIN clients c ON p.client_id = c.id
+     LEFT JOIN sites s ON wo.site_id = s.id
+     LEFT JOIN buildings b ON wo.building_id = b.id
+     LEFT JOIN portfolios p ON s.portfolio_id = p.id
+     LEFT JOIN enterprises e ON wo.enterprise_id = e.id
      LEFT JOIN users assigned_user ON wo.assigned_to = assigned_user.id
-     LEFT JOIN users reported_user ON wo.reported_by = reported_user.id
+     LEFT JOIN users reported_user ON wo.requested_by = reported_user.id
      WHERE wo.id = $1`,
     [id]
   );
@@ -193,7 +200,8 @@ exports.createWorkOrder = asyncHandler(async (req, res) => {
     source = 'manual',
     priority,
     site_id,
-    client_id,
+    enterprise_id,
+    building_id,
     building,
     location,
     asset_ids,

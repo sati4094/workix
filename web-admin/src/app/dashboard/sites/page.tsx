@@ -103,20 +103,37 @@ export default function SitesPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 text-sm mb-4">
+                  {site.enterprise_name && (
+                    <div className="flex justify-between pb-2 border-b">
+                      <span className="text-gray-600">Enterprise:</span>
+                      <span className="font-medium text-blue-600">{site.enterprise_name}</span>
+                    </div>
+                  )}
                   <p className="text-gray-700">{site.address}</p>
                   <p className="text-gray-600">{site.city}, {site.state} {site.postal_code}</p>
                   {site.contact_person && (
                     <p className="text-gray-600">Contact: {site.contact_person} • {site.contact_phone}</p>
                   )}
-                  <div className="flex justify-between pt-2 border-t">
-                    <span className="text-gray-600">Assets:</span>
-                    <span className="font-medium">{site.asset_count || 0}</span>
+                  <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Buildings:</span>
+                      <span className="font-medium">{site.building_count || 0}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Assets:</span>
+                      <span className="font-medium">{site.asset_count || 0}</span>
+                    </div>
                   </div>
                 </div>
-                <Button size="sm" className="w-full" onClick={() => router.push(`/dashboard/assets?site_id=${site.id}`)}>
-                  <Eye className="h-4 w-4 mr-2" />
-                  View Assets
-                </Button>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button size="sm" variant="outline" onClick={() => router.push(`/dashboard/buildings?site_id=${site.id}`)}>
+                    Buildings
+                  </Button>
+                  <Button size="sm" onClick={() => router.push(`/dashboard/assets?site_id=${site.id}`)}>
+                    <Eye className="h-4 w-4 mr-2" />
+                    Assets
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}

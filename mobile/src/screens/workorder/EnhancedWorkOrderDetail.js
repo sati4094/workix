@@ -267,21 +267,26 @@ export default function EnhancedWorkOrderDetail({ route, navigation }) {
           </Chip>
         </View>
 
-        {/* Site & Client Info */}
+        {/* Site, Building & Enterprise Info */}
         <Card style={styles.card}>
           <Card.Title
-            title="Site Information"
+            title="Location Information"
             left={(props) => <MaterialCommunityIcons name="map-marker" size={24} {...props} />}
           />
           <Card.Content>
-            <Text variant="titleMedium">{wo.site_name}</Text>
+            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+              Enterprise: {wo.enterprise_name || wo.client_name}
+            </Text>
+            <Text variant="titleMedium" style={{ marginTop: 8 }}>{wo.site_name}</Text>
             <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
               {wo.site_address}
             </Text>
+            {wo.building_name && (
+              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
+                Building: {wo.building_name} {wo.building_code && `(${wo.building_code})`}
+              </Text>
+            )}
             <Divider style={{ marginVertical: 12 }} />
-            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-              Client: {wo.client_name}
-            </Text>
             {wo.site_contact_person && (
               <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
                 Contact: {wo.site_contact_person} • {wo.site_contact_phone}

@@ -24,7 +24,6 @@ export default function SitesPage() {
   const deleteMutation = useDeleteSite();
 
   const form = useForm<CreateSiteDTO>({
-    resolver: zodResolver(siteSchema),
     defaultValues: { name: '', project_id: '', address: '', city: '', state: '', postal_code: '', country: '', contact_person: '', contact_phone: '', contact_email: '' },
   });
 
@@ -67,19 +66,19 @@ export default function SitesPage() {
             <h1 className="text-3xl font-bold text-gray-900">Sites</h1>
             <p className="text-gray-600 mt-2">Manage facility locations</p>
           </div>
-          <button onClick={handleCreate} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">+ New Site</button>
+          <button onClick={handleCreate} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all shadow-md">+ New Site</button>
         </div>
 
         <SearchFilter onSearchChange={setSearchTerm} searchPlaceholder="Search sites..." />
 
         <DataTable data={filteredSites} loading={isLoading} keyExtractor={(s: Site) => s.id} columns={[
           { key: 'name', label: 'Name', render: (_: any, s: Site) => <span className="font-medium">{s.name}</span> },
+          { key: 'enterprise_name', label: 'Enterprise', render: (_: any, s: Site) => <span className="text-sm">{(s as any).enterprise_name || '-'}</span> },
           { key: 'address', label: 'Address', render: (_: any, s: Site) => <span className="text-sm">{s.address || '-'}</span> },
           { key: 'city', label: 'City', render: (_: any, s: Site) => <span className="text-sm">{s.city || '-'}</span> },
-          { key: 'state', label: 'State', render: (_: any, s: Site) => <span className="text-sm">{s.state || '-'}</span> },
+          { key: 'building_count', label: 'Buildings', render: (_: any, s: Site) => <span className="text-sm font-medium">{(s as any).building_count || 0}</span> },
           { key: 'contact_person', label: 'Contact', render: (_: any, s: Site) => <span className="text-sm">{s.contact_person || '-'}</span> },
-          { key: 'contact_phone', label: 'Phone', render: (_: any, s: Site) => <span className="text-sm">{s.contact_phone || '-'}</span> },
-        ]} actions={(s: Site) => (<><button onClick={(e) => { e.stopPropagation(); handleEdit(s); }} className="text-blue-600 hover:text-blue-800 text-sm font-medium">Edit</button><button onClick={(e) => { e.stopPropagation(); setDeleteSite(s); }} className="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button></>)} />
+        ]} actions={(s: Site) => (<><button onClick={(e) => { e.stopPropagation(); handleEdit(s); }} className="text-purple-600 hover:text-purple-800 text-sm font-medium">Edit</button><button onClick={(e) => { e.stopPropagation(); setDeleteSite(s); }} className="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button></>)} />
       </div>
 
       <CrudModal isOpen={isModalOpen} title={editingSite ? 'Edit Site' : 'New Site'} onClose={() => setIsModalOpen(false)} onSubmit={handleSubmit} submitText={editingSite ? 'Update' : 'Create'} isSubmitting={createMutation.isPending || updateMutation.isPending} size="lg">

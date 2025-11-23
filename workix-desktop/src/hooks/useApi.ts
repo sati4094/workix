@@ -287,6 +287,88 @@ export function useDeleteClient() {
 }
 
 // ============================================================================
+// Enterprise Hooks (NEW)
+// ============================================================================
+
+export function useEnterprises(params?: PaginationParams) {
+  return useQuery({
+    queryKey: ['enterprises', params],
+    queryFn: async () => {
+      const response = await api.enterprises.getAll(params);
+      return response.data?.data?.enterprises || [];
+    },
+  });
+}
+
+export function useEnterprise(id: string) {
+  return useQuery({
+    queryKey: ['enterprise', id],
+    queryFn: async () => {
+      const response = await api.enterprises.getById(id);
+      return response.data.data;
+    },
+    enabled: !!id,
+  });
+}
+
+export function useEnterpriseStats(id: string) {
+  return useQuery({
+    queryKey: ['enterpriseStats', id],
+    queryFn: async () => {
+      const response = await api.enterprises.getStats(id);
+      return response.data.data;
+    },
+    enabled: !!id,
+  });
+}
+
+export function useCreateEnterprise() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (data: Partial<Client>) => api.enterprises.create(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['enterprises'] });
+      toast.success('Enterprise created successfully');
+    },
+    onError: (error) => {
+      toast.error(handleApiError(error));
+    },
+  });
+}
+
+export function useUpdateEnterprise() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<Client> }) =>
+      api.enterprises.update(id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['enterprises'] });
+      toast.success('Enterprise updated successfully');
+    },
+    onError: (error) => {
+      toast.error(handleApiError(error));
+    },
+  });
+}
+
+export function useDeleteEnterprise() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (id: string) => api.enterprises.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['enterprises'] });
+      toast.success('Enterprise deleted successfully');
+    },
+    onError: (error) => {
+      toast.error(handleApiError(error));
+    },
+  });
+}
+
+// ============================================================================
 // Project Hooks
 // ============================================================================
 
@@ -1042,7 +1124,7 @@ export function useBuildings(params?: { site_id?: string; search?: string } & Pa
     queryKey: ['buildings', params],
     queryFn: async () => {
       const response = await api.buildings.getAll(params);
-      return response.data?.data || [];
+      return response.data?.data?.buildings || [];
     },
   });
 }

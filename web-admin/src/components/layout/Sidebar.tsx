@@ -16,16 +16,18 @@ import {
   MapPin,
   Briefcase,
   Upload,
-  FileText
+  FileText,
+  Building
 } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Work Orders', href: '/dashboard/work-orders', icon: ClipboardList },
   { name: 'Users', href: '/dashboard/users', icon: Users },
-  { name: 'Clients', href: '/dashboard/clients', icon: Briefcase },
+  { name: 'Enterprises', href: '/dashboard/enterprises', icon: Briefcase },
   { name: 'Projects', href: '/dashboard/projects', icon: Building2 },
   { name: 'Sites', href: '/dashboard/sites', icon: MapPin },
+  { name: 'Buildings', href: '/dashboard/buildings', icon: Building },
   { name: 'Assets', href: '/dashboard/assets', icon: Package },
   { name: 'Bulk Onboarding', href: '/dashboard/onboarding', icon: Upload },
   { name: 'Reports', href: '/dashboard/reports', icon: FileText },

@@ -118,7 +118,7 @@ export default function ClientsPage() {
             <h1 className="text-3xl font-bold text-gray-900">Clients</h1>
             <p className="text-gray-600 mt-2">Manage client accounts</p>
           </div>
-          <button onClick={handleCreate} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          <button onClick={handleCreate} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all shadow-md">
             + New Client
           </button>
         </div>
@@ -151,11 +151,11 @@ export default function ClientsPage() {
             { key: 'contact_phone', label: 'Phone', render: (_: any, c: Client) => <span className="text-sm">{c.contact_phone || '-'}</span> },
             { key: 'contact_person', label: 'Contact', render: (_: any, c: Client) => <span className="text-sm">{c.contact_person || '-'}</span> },
             { key: 'city', label: 'City', render: (_: any, c: Client) => <span className="text-sm">{c.city || '-'}</span> },
-            { key: 'status', label: 'Status', render: (_: any, c: Client) => <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadge(c.status)}`}>{c.status}</span> },
+            { key: 'status', label: 'Status', render: (_: any, c: Client) => <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusBadge(c.status || 'active')}`}>{c.status || 'active'}</span> },
           ]}
           actions={(c: Client) => (
             <>
-              <button onClick={(e) => { e.stopPropagation(); handleEdit(c); }} className="text-blue-600 hover:text-blue-800 text-sm font-medium">Edit</button>
+              <button onClick={(e) => { e.stopPropagation(); handleEdit(c); }} className="text-purple-600 hover:text-purple-800 text-sm font-medium">Edit</button>
               <button onClick={(e) => { e.stopPropagation(); setDeleteClient(c); }} className="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
             </>
           )}

@@ -42,17 +42,17 @@ export default function ReportsPage() {
             <div className="bg-white p-6 rounded-lg shadow">
               <h3 className="font-semibold text-lg mb-2">Work Orders Report</h3>
               <p className="text-gray-600 text-sm">Analyze work order trends and metrics</p>
-              <button className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Generate Report</button>
+              <button className="mt-4 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded hover:from-purple-700 hover:to-pink-700 shadow-md">Generate Report</button>
             </div>
             <div className="bg-white p-6 rounded-lg shadow">
               <h3 className="font-semibold text-lg mb-2">Asset Performance</h3>
               <p className="text-gray-600 text-sm">Track asset utilization and efficiency</p>
-              <button className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Generate Report</button>
+              <button className="mt-4 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded hover:from-purple-700 hover:to-pink-700 shadow-md">Generate Report</button>
             </div>
             <div className="bg-white p-6 rounded-lg shadow">
               <h3 className="font-semibold text-lg mb-2">Maintenance Analytics</h3>
               <p className="text-gray-600 text-sm">View maintenance costs and history</p>
-              <button className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Generate Report</button>
+              <button className="mt-4 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded hover:from-purple-700 hover:to-pink-700 shadow-md">Generate Report</button>
             </div>
           </div>
         )}

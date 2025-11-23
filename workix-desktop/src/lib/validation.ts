@@ -138,24 +138,41 @@ export const assetSchema = z.object({
 });
 
 // ========================================
-// Client Schema
+// Enterprise Schema (formerly Client)
 // ========================================
 
-export const clientSchema = z.object({
+export const enterpriseSchema = z.object({
   name: z.string()
-    .min(2, 'Client name must be at least 2 characters')
-    .max(200, 'Client name is too long'),
+    .min(2, 'Enterprise name must be at least 2 characters')
+    .max(200, 'Enterprise name is too long'),
+  
+  email: z.string()
+    .email('Invalid email address')
+    .optional().or(z.literal('')),
+  
+  phone: z.string()
+    .regex(/^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/, 'Invalid phone number')
+    .optional().or(z.literal('')),
+  
+  industry: z.string()
+    .max(100, 'Industry is too long')
+    .optional(),
+  
+  website: z.string()
+    .url('Invalid website URL')
+    .optional().or(z.literal('')),
   
   contact_person: z.string()
     .max(100, 'Contact person name is too long')
     .optional(),
   
   contact_email: z.string()
-    .email('Invalid email address'),
+    .email('Invalid contact email address')
+    .optional().or(z.literal('')),
   
   contact_phone: z.string()
     .regex(/^[+]?[(]?[0-9]{1,4}[)]?[-\s./0-9]*$/, 'Invalid phone number')
-    .optional(),
+    .optional().or(z.literal('')),
   
   address: z.string()
     .max(500, 'Address is too long')
@@ -177,17 +194,23 @@ export const clientSchema = z.object({
     .max(20, 'Postal code is too long')
     .optional(),
   
-  website: z.string()
-    .url('Invalid website URL')
-    .optional()
-    .or(z.literal('')),
-  
-  industry: z.string()
-    .max(100, 'Industry name is too long')
+  billing_address: z.string()
+    .max(500, 'Billing address is too long')
     .optional(),
   
-  status: z.enum(['active', 'inactive']),
+  tax_id: z.string()
+    .max(50, 'Tax ID is too long')
+    .optional(),
+  
+  notes: z.string()
+    .max(2000, 'Notes are too long')
+    .optional(),
+  
+  status: z.enum(['active', 'inactive']).optional(),
 });
+
+// Legacy alias
+export const clientSchema = enterpriseSchema;
 
 // ========================================
 // Project Schema
@@ -202,11 +225,27 @@ export const projectSchema = z.object({
     .max(2000, 'Description is too long')
     .optional(),
   
+  enterprise_id: z.string()
+    .uuid('Please select a valid enterprise')
+    .optional(),
+  
+  // Legacy support
   client_id: z.string()
-    .uuid('Please select a valid client'),
+    .uuid('Please select a valid client')
+    .optional(),
   
   manager_id: z.string()
     .uuid('Please select a valid manager')
+    .optional(),
+  
+  contract_number: z.string()
+    .max(100, 'Contract number is too long')
+    .optional(),
+  
+  scope_type: z.enum(['enterprise', 'site', 'building', 'category']).optional(),
+  
+  scope_category: z.string()
+    .max(100, 'Scope category is too long')
     .optional(),
   
   start_date: z.string()
@@ -443,7 +482,8 @@ export const registerSchema = z.object({
 
 export type WorkOrderFormData = z.infer<typeof workOrderSchema>;
 export type AssetFormData = z.infer<typeof assetSchema>;
-export type ClientFormData = z.infer<typeof clientSchema>;
+export type EnterpriseFormData = z.infer<typeof enterpriseSchema>;
+export type ClientFormData = z.infer<typeof clientSchema>; // Legacy alias
 export type ProjectFormData = z.infer<typeof projectSchema>;
 export type SiteFormData = z.infer<typeof siteSchema>;
 export type UserFormData = z.infer<typeof userSchema>;

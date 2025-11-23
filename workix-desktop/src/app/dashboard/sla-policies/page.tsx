@@ -152,7 +152,7 @@ export default function SLAPoliciesPage() {
             <h1 className="text-3xl font-bold text-gray-900">SLA Policies</h1>
             <p className="text-gray-600 mt-2">Manage service level agreement policies</p>
           </div>
-          <button onClick={handleCreate} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          <button onClick={handleCreate} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all shadow-md">
             + New SLA Policy
           </button>
         </div>
@@ -182,12 +182,12 @@ export default function SLAPoliciesPage() {
             { key: 'priority', label: 'Priority', render: (_: any, p: SLAPolicy) => <span className={`px-3 py-1 rounded-full text-sm font-medium ${getPriorityBadge(p.priority)}`}>{p.priority}</span> },
             { key: 'response_time', label: 'Response Time', render: (_: any, p: SLAPolicy) => <span className="text-sm">{p.response_time_hours}h</span> },
             { key: 'resolution_time', label: 'Resolution Time', render: (_: any, p: SLAPolicy) => <span className="text-sm">{p.resolution_time_hours}h</span> },
-            { key: 'escalation', label: 'Escalation', render: (_: any, p: SLAPolicy) => <span className={`px-3 py-1 rounded-full text-sm font-medium ${p.escalation_enabled ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>{p.escalation_enabled ? 'Enabled' : 'Disabled'}</span> },
+            { key: 'escalation', label: 'Escalation', render: (_: any, p: SLAPolicy) => <span className={`px-3 py-1 rounded-full text-sm font-medium ${p.escalation_enabled ? 'bg-purple-100 text-purple-800' : 'bg-gray-100 text-gray-800'}`}>{p.escalation_enabled ? 'Enabled' : 'Disabled'}</span> },
             { key: 'is_active', label: 'Status', render: (_: any, p: SLAPolicy) => <span className={`px-3 py-1 rounded-full text-sm font-medium ${p.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>{p.is_active ? 'Active' : 'Inactive'}</span> },
           ]}
           actions={(p: SLAPolicy) => (
             <>
-              <button onClick={(e) => { e.stopPropagation(); handleEdit(p); }} className="text-blue-600 hover:text-blue-800 text-sm font-medium">Edit</button>
+              <button onClick={(e) => { e.stopPropagation(); handleEdit(p); }} className="text-purple-600 hover:text-purple-800 text-sm font-medium">Edit</button>
               <button onClick={(e) => { e.stopPropagation(); setDeletePolicy(p); }} className="text-red-600 hover:text-red-800 text-sm font-medium">Delete</button>
             </>
           )}

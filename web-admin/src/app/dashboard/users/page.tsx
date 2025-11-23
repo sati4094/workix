@@ -9,15 +9,25 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { getStatusColor } from '@/lib/utils'
 import { Plus, Search, Edit, Trash2, X } from 'lucide-react'
+import { PermissionMatrix } from '@/components/PermissionMatrix'
+import { useAuthStore } from '@/store/authStore'
 
 export default function UsersPage() {
   const router = useRouter()
+  const { user } = useAuthStore()
+  const [activeTab, setActiveTab] = useState<'users' | 'permissions'>('users')
   const [users, setUsers] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [editingUser, setEditingUser] = useState<any>(null)
+  
+  // Permission Matrix state
+  const [roles, setRoles] = useState<any[]>([])
+  const [permissions, setPermissions] = useState<any[]>([])
+  const [rolePermissions, setRolePermissions] = useState<Record<string, string[]>>({})
+  const [permissionsLoading, setPermissionsLoading] = useState(false)
 
   useEffect(() => {
     fetchUsers()
@@ -51,6 +61,80 @@ export default function UsersPage() {
     }
   }
 
+  // Fetch permission matrix when tab changes
+  useEffect(() => {
+    if (activeTab === 'permissions' && user?.role && ['admin', 'superadmin'].includes(user.role.toLowerCase())) {
+      fetchPermissionMatrix()
+    }
+  }, [activeTab, user])
+
+  const fetchPermissionMatrix = async () => {
+    try {
+      setPermissionsLoading(true)
+      const response = await fetch('http://localhost:5000/api/v1/permissions/matrix', {
+        headers: {
+          'Authorization': `Bearer ${useAuthStore.getState().token}`,
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      if (!response.ok) throw new Error('Failed to fetch permission matrix')
+      
+      const data = await response.json()
+      setRoles(data.data.roles || [])
+      setPermissions(data.data.permissions || [])
+      
+      // Convert role_permissions object to roleId -> permissionId[] format
+      const rolePerms: Record<string, string[]> = {}
+      Object.entries(data.data.rolePermissions || {}).forEach(([roleId, perms]: [string, any]) => {
+        rolePerms[roleId] = Object.entries(perms)
+          .filter(([_, granted]) => granted)
+          .map(([permId]) => permId)
+      })
+      setRolePermissions(rolePerms)
+    } catch (error) {
+      console.error('Failed to fetch permissions:', error)
+    } finally {
+      setPermissionsLoading(false)
+    }
+  }
+
+  const handlePermissionToggle = async (roleId: string, permissionId: string, granted: boolean) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/v1/roles/${roleId}/permissions/${permissionId}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${useAuthStore.getState().token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ granted })
+      })
+      
+      if (!response.ok) throw new Error('Failed to update permission')
+      
+      // Update local state
+      setRolePermissions(prev => {
+        const updated = { ...prev }
+        if (!updated[roleId]) updated[roleId] = []
+        
+        if (granted) {
+          if (!updated[roleId].includes(permissionId)) {
+            updated[roleId] = [...updated[roleId], permissionId]
+          }
+        } else {
+          updated[roleId] = updated[roleId].filter(id => id !== permissionId)
+        }
+        
+        return updated
+      })
+    } catch (error) {
+      console.error('Failed to toggle permission:', error)
+      alert('Failed to update permission. Please try again.')
+    }
+  }
+
+  const canManagePermissions = user?.role && ['admin', 'superadmin'].includes(user.role.toLowerCase())
+
   const filteredUsers = users.filter(user => {
     if (!searchQuery) return true
     const query = searchQuery.toLowerCase()
@@ -75,8 +159,37 @@ export default function UsersPage() {
         </Button>
       </div>
 
-      {/* Filters */}
-      <Card className="mb-6">
+      {/* Tab Navigation */}
+      <div className="flex space-x-1 mb-6 border-b border-gray-200">
+        <button
+          onClick={() => setActiveTab('users')}
+          className={`px-6 py-3 font-medium transition-colors ${
+            activeTab === 'users'
+              ? 'text-blue-600 border-b-2 border-blue-600'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          User Management
+        </button>
+        {canManagePermissions && (
+          <button
+            onClick={() => setActiveTab('permissions')}
+            className={`px-6 py-3 font-medium transition-colors ${
+              activeTab === 'permissions'
+                ? 'text-blue-600 border-b-2 border-blue-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            Permission Matrix
+          </button>
+        )}
+      </div>
+
+      {/* User Management Tab */}
+      {activeTab === 'users' && (
+        <>
+          {/* Filters */}
+          <Card className="mb-6">
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="relative">
@@ -99,7 +212,7 @@ export default function UsersPage() {
               <option value="manager">Manager</option>
               <option value="analyst">Analyst</option>
               <option value="technician">Technician</option>
-              <option value="client">Client</option>
+              <option value="enterprise">Enterprise User</option>
             </select>
 
             <Button variant="outline" onClick={fetchUsers}>
@@ -357,6 +470,28 @@ function UserModal({ user, onClose, onSuccess }: { user?: any, onClose: () => vo
           </form>
         </CardContent>
       </Card>
+        </>
+      )}
+
+      {/* Permission Matrix Tab */}
+      {activeTab === 'permissions' && canManagePermissions && (
+        <div className="space-y-6">
+          {permissionsLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+          ) : (
+            <PermissionMatrix
+              currentUserRole={user?.role?.toLowerCase() || ''}
+              currentUserLevel={user?.role?.toLowerCase() === 'superadmin' ? 0 : 2}
+              roles={roles}
+              permissions={permissions}
+              rolePermissions={rolePermissions}
+              onPermissionToggle={handlePermissionToggle}
+            />
+          )}
+        </div>
+      )}
     </div>
   )
 }

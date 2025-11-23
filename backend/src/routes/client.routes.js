@@ -6,19 +6,22 @@ const { AppError, asyncHandler } = require('../middlewares/errorHandler');
 
 router.use(verifyToken);
 
-// Get all clients
+// Get all clients (redirected to enterprises)
 router.get('/', asyncHandler(async (req, res) => {
   const { page = 1, limit = 50 } = req.query;
   const offset = (page - 1) * limit;
 
-  const countResult = await query('SELECT COUNT(*) as total FROM clients');
+  const countResult = await query('SELECT COUNT(*) as total FROM enterprises');
   const total = parseInt(countResult.rows[0].total);
 
   const result = await query(
-    `SELECT c.*, u.name as created_by_name
-     FROM clients c
-     LEFT JOIN users u ON c.created_by = u.id
-     ORDER BY c.name ASC
+    `SELECT e.*, u.name as created_by_name,
+      (SELECT COUNT(*) FROM sites WHERE enterprise_id = e.id) as total_sites,
+      (SELECT COUNT(*) FROM buildings b JOIN sites s ON b.site_id = s.id WHERE s.enterprise_id = e.id) as total_buildings,
+      (SELECT COUNT(*) FROM assets a JOIN sites s ON a.site_id = s.id WHERE s.enterprise_id = e.id) as total_assets
+     FROM enterprises e
+     LEFT JOIN users u ON e.created_by = u.id
+     ORDER BY e.name ASC
      LIMIT $1 OFFSET $2`,
     [limit, offset]
   );
@@ -32,9 +35,17 @@ router.get('/', asyncHandler(async (req, res) => {
   });
 }));
 
-// Get client by ID
+// Get client by ID (redirected to enterprises)
 router.get('/:id', asyncHandler(async (req, res) => {
-  const result = await query('SELECT * FROM clients WHERE id = $1', [req.params.id]);
+  const result = await query(
+    `SELECT e.*,
+      (SELECT COUNT(*) FROM sites WHERE enterprise_id = e.id) as total_sites,
+      (SELECT COUNT(*) FROM buildings b JOIN sites s ON b.site_id = s.id WHERE s.enterprise_id = e.id) as total_buildings,
+      (SELECT COUNT(*) FROM assets a JOIN sites s ON a.site_id = s.id WHERE s.enterprise_id = e.id) as total_assets
+     FROM enterprises e
+     WHERE e.id = $1`,
+    [req.params.id]
+  );
 
   if (result.rows.length === 0) {
     throw new AppError('Client not found', 404);
@@ -52,7 +63,7 @@ router.post('/', restrictTo('admin', 'manager'), asyncHandler(async (req, res) =
   }
 
   const result = await query(
-    `INSERT INTO clients (name, contact_person, contact_email, contact_phone, address, city, state, postal_code, country, notes, created_by)
+    `INSERT INTO enterprises (name, contact_person, contact_email, contact_phone, address, city, state, postal_code, country, notes, created_by)
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
      RETURNING *`,
     [name, contact_person, contact_email, contact_phone, address, city, state, postal_code, country || 'USA', notes, req.user.id]
@@ -84,7 +95,7 @@ router.patch('/:id', restrictTo('admin', 'manager'), asyncHandler(async (req, re
   values.push(id);
 
   const result = await query(
-    `UPDATE clients SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${paramCount} RETURNING *`,
+    `UPDATE enterprises SET ${updates.join(', ')}, updated_at = CURRENT_TIMESTAMP WHERE id = $${paramCount} RETURNING *`,
     values
   );
 
@@ -97,7 +108,7 @@ router.patch('/:id', restrictTo('admin', 'manager'), asyncHandler(async (req, re
 
 // Delete client
 router.delete('/:id', restrictTo('admin'), asyncHandler(async (req, res) => {
-  const result = await query('DELETE FROM clients WHERE id = $1 RETURNING id', [req.params.id]);
+  const result = await query('DELETE FROM enterprises WHERE id = $1 RETURNING id', [req.params.id]);
 
   if (result.rows.length === 0) {
     throw new AppError('Client not found', 404);

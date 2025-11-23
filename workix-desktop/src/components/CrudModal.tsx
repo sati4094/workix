@@ -97,7 +97,7 @@ export function CrudModal({
               type="button"
               onClick={onSubmit}
               disabled={isSubmitting}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-md"
             >
               {isSubmitting && (
                 <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">

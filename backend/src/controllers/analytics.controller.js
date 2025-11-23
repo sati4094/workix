@@ -12,12 +12,12 @@ exports.getDashboardStats = async (req, res) => {
         COUNT(*) as total_work_orders,
         COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed,
         COUNT(CASE WHEN status = 'in_progress' THEN 1 END) as in_progress,
-        COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending,
+        COUNT(CASE WHEN status = 'open' THEN 1 END) as pending,
         COUNT(CASE WHEN priority = 'critical' THEN 1 END) as critical,
-        AVG(CASE WHEN status = 'completed' AND completed_at IS NOT NULL 
-          THEN EXTRACT(EPOCH FROM (completed_at - created_at))/3600 END) as avg_completion_hours,
+        AVG(CASE WHEN status = 'completed' AND actual_end IS NOT NULL 
+          THEN EXTRACT(EPOCH FROM (actual_end - created_at))/3600 END) as avg_completion_hours,
         COUNT(DISTINCT assigned_to) as active_technicians,
-        COUNT(CASE WHEN status = 'completed' AND completed_at >= CURRENT_DATE - INTERVAL '7 days' THEN 1 END) as completed_this_week
+        COUNT(CASE WHEN status = 'completed' AND actual_end >= CURRENT_DATE - INTERVAL '7 days' THEN 1 END) as completed_this_week
       FROM work_orders
       WHERE created_at >= CURRENT_DATE - INTERVAL '${parseInt(timeRange)} days'
     `;
@@ -93,12 +93,12 @@ exports.getDashboardStats = async (req, res) => {
         u.id,
         u.name,
         COUNT(*) as completed_count,
-        AVG(EXTRACT(EPOCH FROM (w.completed_at - w.created_at))/3600) as avg_completion_hours,
+        AVG(EXTRACT(EPOCH FROM (w.actual_end - w.created_at))/3600) as avg_completion_hours,
         COUNT(CASE WHEN w.priority = 'critical' THEN 1 END) as critical_completed
       FROM work_orders w
       JOIN users u ON w.assigned_to = u.id
       WHERE w.status = 'completed' 
-        AND w.completed_at >= CURRENT_DATE - INTERVAL '${parseInt(timeRange)} days'
+        AND w.actual_end >= CURRENT_DATE - INTERVAL '${parseInt(timeRange)} days'
       GROUP BY u.id, u.name
       ORDER BY completed_count DESC
       LIMIT 10
@@ -111,15 +111,14 @@ exports.getDashboardStats = async (req, res) => {
       SELECT 
         a.id,
         a.name,
-        a.type as category,
+        a.category,
         COUNT(w.id) as work_order_count,
-        AVG(EXTRACT(EPOCH FROM (w.completed_at - w.created_at))/3600) as avg_repair_hours,
+        AVG(EXTRACT(EPOCH FROM (w.actual_end - w.created_at))/3600) as avg_repair_hours,
         SUM(CASE WHEN w.status = 'completed' THEN 1 ELSE 0 END) as completed_repairs
       FROM assets a
-      LEFT JOIN work_order_assets woa ON a.id = woa.asset_id
-      LEFT JOIN work_orders w ON woa.work_order_id = w.id
+      LEFT JOIN work_orders w ON w.asset_id = a.id
         AND w.created_at >= CURRENT_DATE - INTERVAL '${parseInt(timeRange)} days'
-      GROUP BY a.id, a.name, a.type
+      GROUP BY a.id, a.name, a.category
       HAVING COUNT(w.id) > 0
       ORDER BY work_order_count DESC
       LIMIT 10
@@ -159,14 +158,15 @@ exports.getDashboardStats = async (req, res) => {
     // Response Time Analysis
     const responseQuery = `
       SELECT 
-        AVG(CASE WHEN acknowledged_at IS NOT NULL 
-          THEN EXTRACT(EPOCH FROM (acknowledged_at - created_at))/3600 END) as avg_response_hours,
-        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (acknowledged_at - created_at))/3600) as median_response_hours,
-        AVG(CASE WHEN status = 'completed' AND completed_at IS NOT NULL 
-          THEN EXTRACT(EPOCH FROM (completed_at - created_at))/3600 END) as avg_resolution_hours,
-        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (completed_at - created_at))/3600) as median_resolution_hours
+        AVG(CASE WHEN actual_start IS NOT NULL 
+          THEN EXTRACT(EPOCH FROM (actual_start - created_at))/3600 END) as avg_response_hours,
+        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (actual_start - created_at))/3600) as median_response_hours,
+        AVG(CASE WHEN status = 'completed' AND actual_end IS NOT NULL 
+          THEN EXTRACT(EPOCH FROM (actual_end - created_at))/3600 END) as avg_resolution_hours,
+        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (actual_end - created_at))/3600) as median_resolution_hours
       FROM work_orders
       WHERE created_at >= CURRENT_DATE - INTERVAL '${parseInt(timeRange)} days'
+        AND (actual_start IS NOT NULL OR actual_end IS NOT NULL)
     `;
     
     const responseResult = await query(responseQuery);
@@ -234,7 +234,7 @@ exports.getRealTimeMetrics = async (req, res) => {
   try {
     const metricsQuery = `
       SELECT 
-        (SELECT COUNT(*) FROM work_orders WHERE status = 'pending') as pending_count,
+        (SELECT COUNT(*) FROM work_orders WHERE status = 'open') as pending_count,
         (SELECT COUNT(*) FROM work_orders WHERE status = 'in_progress') as active_count,
         (SELECT COUNT(*) FROM work_orders WHERE priority = 'critical' AND status NOT IN ('completed', 'cancelled')) as critical_open,
         0 as sla_violations_today,

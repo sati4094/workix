@@ -193,20 +193,25 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
           </Chip>
         </View>
 
-        {/* Site & Client Info */}
+        {/* Site, Building & Enterprise Info */}
         <Card style={styles.card}>
           <Card.Title
-            title="Site Information"
+            title="Location Information"
             left={(props) => <MaterialCommunityIcons name="map-marker" size={24} {...props} />}
           />
           <Card.Content>
-            <Text variant="bodyMedium">{wo.site_name}</Text>
+            <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+              Enterprise: {wo.enterprise_name || wo.client_name}
+            </Text>
+            <Text variant="bodyMedium" style={{ marginTop: 8 }}>{wo.site_name}</Text>
             <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
               {wo.site_address}
             </Text>
-            <Text variant="bodySmall" style={{ marginTop: 8, color: theme.colors.onSurfaceVariant }}>
-              Client: {wo.client_name}
-            </Text>
+            {wo.building_name && (
+              <Text variant="bodySmall" style={{ marginTop: 4, color: theme.colors.onSurfaceVariant }}>
+                Building: {wo.building_name}
+              </Text>
+            )}
             {wo.site_contact_person && (
               <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
                 Contact: {wo.site_contact_person} • {wo.site_contact_phone}

@@ -22,7 +22,7 @@ export default function OnboardingPage() {
               <div className="text-4xl mb-4">{step.icon}</div>
               <h3 className="font-semibold text-lg mb-2">{step.title}</h3>
               <p className="text-gray-600 text-sm mb-4">{step.desc}</p>
-              <button className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+              <button className="px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded hover:from-purple-700 hover:to-pink-700 shadow-md">
                 {step.done ? 'Completed' : 'Get Started'}
               </button>
             </div>
