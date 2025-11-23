@@ -1,4 +1,5 @@
 import React from 'react';
+import { View, ActivityIndicator, Text } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -12,9 +13,11 @@ import ProfileScreen from '../screens/profile/ProfileScreen';
 
 // Main Screens
 import HomeScreen from '../screens/home/HomeScreen';
-import ActivityScreen from '../screens/activity/ActivityScreen';
+import WorkOrdersScreen from '../screens/workorder/WorkOrdersScreen';
 import WorkOrderDetailScreen from '../screens/workorder/WorkOrderDetailScreen';
-import PPMScheduleScreen from '../screens/ppm/PPMScheduleScreen';
+import ProjectsScreen from '../screens/projects/ProjectsScreen';
+import SitesScreen from '../screens/sites/SitesScreen';
+import AssetsScreen from '../screens/assets/AssetsScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -42,32 +45,10 @@ function MainTabs() {
         name="Home"
         component={HomeScreen}
         options={{
-          title: 'Service Requests',
-          tabBarLabel: 'Inbox',
+          title: 'Dashboard',
+          tabBarLabel: 'Dashboard',
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="inbox" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="Activity"
-        component={ActivityScreen}
-        options={{
-          title: 'My Work Orders',
-          tabBarLabel: 'Activity',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="clipboard-list" size={size} color={color} />
-          ),
-        }}
-      />
-      <Tab.Screen
-        name="PPM"
-        component={PPMScheduleScreen}
-        options={{
-          title: 'PPM Schedule',
-          tabBarLabel: 'PPM',
-          tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="calendar-check" size={size} color={color} />
+            <MaterialCommunityIcons name="view-dashboard" size={size} color={color} />
           ),
         }}
       />
@@ -90,9 +71,17 @@ function MainTabs() {
 export default function AppNavigator() {
   const { isAuthenticated, isLoading } = useAuthStore();
 
+  // Show loading screen while checking auth status
   if (isLoading) {
-    return null; // Or a loading screen
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+        <ActivityIndicator size="large" color="#2563eb" />
+        <Text style={{ marginTop: 16, color: '#666' }}>Loading...</Text>
+      </View>
+    );
   }
+
+  console.log('AppNavigator - isAuthenticated:', isAuthenticated, 'isLoading:', isLoading);
 
   return (
     <Stack.Navigator
@@ -106,11 +95,43 @@ export default function AppNavigator() {
         <>
           <Stack.Screen name="MainTabs" component={MainTabs} />
           <Stack.Screen 
+            name="WorkOrders" 
+            component={WorkOrdersScreen}
+            options={{
+              headerShown: true,
+              title: 'Work Orders',
+            }}
+          />
+          <Stack.Screen 
             name="WorkOrderDetail" 
             component={WorkOrderDetailScreen}
             options={{
               headerShown: true,
               title: 'Work Order Details',
+            }}
+          />
+          <Stack.Screen 
+            name="Projects" 
+            component={ProjectsScreen}
+            options={{
+              headerShown: true,
+              title: 'Projects',
+            }}
+          />
+          <Stack.Screen 
+            name="Sites" 
+            component={SitesScreen}
+            options={{
+              headerShown: true,
+              title: 'Sites',
+            }}
+          />
+          <Stack.Screen 
+            name="Assets" 
+            component={AssetsScreen}
+            options={{
+              headerShown: true,
+              title: 'Assets',
             }}
           />
         </>

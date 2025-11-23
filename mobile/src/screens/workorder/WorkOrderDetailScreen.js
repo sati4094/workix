@@ -114,13 +114,19 @@ export default function WorkOrderDetailScreen({ route, navigation }) {
       return;
     }
 
-    const result = await addActivity(workOrderId, {
+    const activityData = {
       activity_type: activityType,
       description,
       ai_enhanced: originalText !== description,
       original_text: originalText || null,
-      pictures: photos.length > 0 ? photos : null,
-    });
+    };
+
+    // Only include pictures if there are photos
+    if (photos.length > 0) {
+      activityData.pictures = photos;
+    }
+
+    const result = await addActivity(workOrderId, activityData);
 
     if (result.success) {
       // Clear fields

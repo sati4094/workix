@@ -164,7 +164,7 @@ export default function EnhancedWorkOrderDetail({ route, navigation }) {
       description,
       ai_enhanced: originalText !== description,
       original_text: originalText || null,
-      pictures: photos.length > 0 ? photos : null,
+      ...(photos.length > 0 && { pictures: photos }),
     });
 
     if (result.success) {

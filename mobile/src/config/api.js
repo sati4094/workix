@@ -1,9 +1,15 @@
 // API Configuration
 // For mobile testing: Replace localhost with your computer's IP address
 // Find your IP: Run 'ipconfig' on Windows or 'ifconfig' on Mac/Linux
+// 
+// IMPORTANT: Change the IP address based on your setup:
+// - Android Emulator: Use 10.0.2.2
+// - Real Android Device: Use your computer's IP (e.g., 192.168.1.x)
+// - iOS Simulator: Use localhost or 127.0.0.1
+// - Real iOS Device: Use your computer's IP (e.g., 192.168.1.x)
 export const API_CONFIG = {
   BASE_URL: __DEV__ 
-    ? 'http://10.0.2.2:5000/api/v1'  // Android Emulator (use your computer's IP for real device)
+    ? 'http://192.168.1.13:5000/api/v1'  // Change this to your computer's IP address
     : 'https://api.workix.com/api/v1', // Production
   
   TIMEOUT: 30000, // 30 seconds
