@@ -16,16 +16,15 @@ router.get('/', asyncHandler(async (req, res) => {
     SELECT 
       b.*,
       s.name as site_name,
-      s.facility_code as site_code,
+      s.site_code,
       e.name as enterprise_name,
+      e.enterprise_code,
       e.id as enterprise_id,
-      u.name as created_by_name,
       COUNT(DISTINCT a.id) as asset_count,
-      COUNT(DISTINCT wo.id) FILTER (WHERE wo.status = 'open') as open_work_orders
+      COUNT(DISTINCT wo.id) FILTER (WHERE wo.status = 'pending') as open_work_orders
     FROM buildings b
     INNER JOIN sites s ON b.site_id = s.id
     LEFT JOIN enterprises e ON s.enterprise_id = e.id
-    LEFT JOIN users u ON b.created_by = u.id
     LEFT JOIN assets a ON a.building_id = b.id
     LEFT JOIN work_orders wo ON wo.building_id = b.id
     WHERE 1=1
@@ -61,7 +60,7 @@ router.get('/', asyncHandler(async (req, res) => {
   const countResult = await query(countQuery, queryParams);
   const total = parseInt(countResult.rows[0].total);
 
-  dataQuery += ` GROUP BY b.id, s.name, s.facility_code, e.name, e.id, u.name ORDER BY s.name, b.name ASC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
+  dataQuery += ` GROUP BY b.id, s.name, s.site_code, e.name, e.enterprise_code, e.id ORDER BY s.name, b.name ASC LIMIT $${paramCount} OFFSET $${paramCount + 1}`;
   queryParams.push(limit, offset);
 
   const result = await query(dataQuery, queryParams);
@@ -86,23 +85,22 @@ router.get('/:id', asyncHandler(async (req, res) => {
     `SELECT 
       b.*,
       s.name as site_name,
-      s.facility_code as site_code,
+      s.site_code,
       s.address as site_address,
       e.name as enterprise_name,
+      e.enterprise_code,
       e.id as enterprise_id,
-      u.name as created_by_name,
       COUNT(DISTINCT a.id) as total_assets,
-      COUNT(DISTINCT wo.id) FILTER (WHERE wo.status = 'open') as open_work_orders,
+      COUNT(DISTINCT wo.id) FILTER (WHERE wo.status = 'pending') as open_work_orders,
       COUNT(DISTINCT wo.id) FILTER (WHERE wo.status = 'in_progress') as in_progress_work_orders,
       COUNT(DISTINCT wo.id) FILTER (WHERE wo.status = 'completed') as completed_work_orders
     FROM buildings b
     INNER JOIN sites s ON b.site_id = s.id
     LEFT JOIN enterprises e ON s.enterprise_id = e.id
-    LEFT JOIN users u ON b.created_by = u.id
     LEFT JOIN assets a ON a.building_id = b.id
     LEFT JOIN work_orders wo ON wo.building_id = b.id
     WHERE b.id = $1
-    GROUP BY b.id, s.name, s.facility_code, s.address, e.name, e.id, u.name`,
+    GROUP BY b.id, s.name, s.site_code, s.address, e.name, e.enterprise_code, e.id`,
     [req.params.id]
   );
 
@@ -116,11 +114,11 @@ router.get('/:id', asyncHandler(async (req, res) => {
       a.id,
       a.name,
       a.asset_tag,
-      a.category,
+      a.type::text as category,
       a.status,
-      COUNT(wo.id) as work_order_count
+      COUNT(woa.work_order_id) as work_order_count
     FROM assets a
-    LEFT JOIN work_orders wo ON wo.asset_id = a.id
+    LEFT JOIN work_order_assets woa ON woa.asset_id = a.id
     WHERE a.building_id = $1
     GROUP BY a.id
     ORDER BY a.name ASC`,
@@ -312,10 +310,10 @@ router.get('/:id/stats', asyncHandler(async (req, res) => {
       COUNT(DISTINCT a.id) FILTER (WHERE a.status = 'operational') as operational_assets,
       COUNT(DISTINCT a.id) FILTER (WHERE a.status = 'maintenance') as maintenance_assets,
       COUNT(DISTINCT wo.id) as total_work_orders,
-      COUNT(DISTINCT wo.id) FILTER (WHERE wo.status = 'open') as open_work_orders,
+      COUNT(DISTINCT wo.id) FILTER (WHERE wo.status = 'pending') as open_work_orders,
       COUNT(DISTINCT wo.id) FILTER (WHERE wo.status = 'in_progress') as in_progress_work_orders,
-      COUNT(DISTINCT wo.id) FILTER (WHERE wo.status = 'completed' AND wo.actual_end >= NOW() - INTERVAL '30 days') as completed_last_30_days,
-      AVG(EXTRACT(EPOCH FROM (wo.actual_end - wo.actual_start))/3600) FILTER (WHERE wo.status = 'completed' AND wo.actual_end IS NOT NULL) as avg_completion_hours
+      COUNT(DISTINCT wo.id) FILTER (WHERE wo.status = 'completed' AND wo.completed_at >= NOW() - INTERVAL '30 days') as completed_last_30_days,
+      AVG(EXTRACT(EPOCH FROM (wo.completed_at - wo.started_at))/3600) FILTER (WHERE wo.status = 'completed' AND wo.completed_at IS NOT NULL) as avg_completion_hours
     FROM buildings b
     LEFT JOIN assets a ON a.building_id = b.id
     LEFT JOIN work_orders wo ON wo.building_id = b.id

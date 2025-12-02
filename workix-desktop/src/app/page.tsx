@@ -91,8 +91,11 @@ export default function Home() {
             <div className="bg-gradient-to-br from-purple-600 via-pink-500 to-purple-700 text-white p-8 rounded-lg shadow-xl">
               <h3 className="text-2xl font-bold mb-2">Ready to Get Started?</h3>
               <p className="mb-4">Access all features from the sidebar menu to manage your EPC service operations.</p>
-              <button className="bg-white text-purple-600 px-6 py-2 rounded font-semibold hover:bg-gray-100 transition-colors shadow-md">
-                Explore Features
+              <button 
+                onClick={() => router.push('/dashboard')}
+                className="bg-white text-purple-600 px-6 py-2 rounded font-semibold hover:bg-gray-100 transition-colors shadow-md focus:ring-2 focus:ring-white focus:outline-none"
+              >
+                Go to Dashboard
               </button>
             </div>
           </>

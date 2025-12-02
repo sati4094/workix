@@ -5,7 +5,7 @@ export interface ApiResponse<T> {
 }
 
 export class DesktopApiClient {
-  private backendUrl = 'http://localhost:5000/api/v1';
+  private backendUrl = process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}/api/v1` : 'http://localhost:5000/api/v1';
 
   private getToken(): string | null {
     if (typeof window === 'undefined') return null;

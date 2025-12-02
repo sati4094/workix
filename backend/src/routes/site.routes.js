@@ -19,11 +19,11 @@ router.get('/', asyncHandler(async (req, res) => {
 
   const paramCount = values.length + 1;
   const result = await query(
-    `SELECT s.*, p.name as portfolio_name, e.name as enterprise_name, e.id as enterprise_id,
+    `SELECT s.*, e.name as enterprise_name, e.id as enterprise_id,
       (SELECT COUNT(*) FROM buildings WHERE site_id = s.id) as building_count,
       (SELECT COUNT(*) FROM assets WHERE site_id = s.id) as asset_count
      FROM sites s
-     LEFT JOIN portfolios p ON s.portfolio_id = p.id
+     
      LEFT JOIN enterprises e ON s.enterprise_id = e.id
      ${conditions}
      ORDER BY s.name ASC
@@ -43,13 +43,13 @@ router.get('/', asyncHandler(async (req, res) => {
 // Get site by ID
 router.get('/:id', asyncHandler(async (req, res) => {
   const result = await query(
-    `SELECT s.*, p.name as portfolio_name, e.name as enterprise_name, e.id as enterprise_id,
+    `SELECT s.*, e.name as enterprise_name, e.id as enterprise_id,
       (SELECT json_agg(json_build_object('id', b.id, 'name', b.name, 'building_code', b.building_code, 'floors', b.floors, 'status', b.status))
        FROM buildings b WHERE b.site_id = s.id) as buildings,
-      (SELECT json_agg(json_build_object('id', a.id, 'name', a.name, 'asset_tag', a.asset_tag, 'category', a.category, 'status', a.status))
+      (SELECT json_agg(json_build_object('id', a.id, 'name', a.name, 'asset_tag', a.asset_tag, 'category', a.type::text, 'status', a.status))
        FROM assets a WHERE a.site_id = s.id) as assets
      FROM sites s
-     LEFT JOIN portfolios p ON s.portfolio_id = p.id
+     
      LEFT JOIN enterprises e ON s.enterprise_id = e.id
      WHERE s.id = $1`,
     [req.params.id]

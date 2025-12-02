@@ -8,16 +8,16 @@ router.use(verifyToken);
 
 // Get all storerooms
 router.get('/', asyncHandler(async (req, res) => {
-  const { org_id, site_id, page = 1, limit = 50 } = req.query;
+  const { enterprise_id, site_id, page = 1, limit = 50 } = req.query;
   const offset = (page - 1) * limit;
   
   
-  let query = 'SELECT sr.*, s.name as site_name FROM storerooms sr LEFT JOIN sites s ON sr.site_id = s.id WHERE sr.is_active = true';
+  let query = 'SELECT sr.*, s.name as site_name, s.site_code FROM storerooms sr LEFT JOIN sites s ON sr.site_id = s.id WHERE sr.is_active = true';
   const params = [];
   
-  if (org_id) {
-    params.push(org_id);
-    query += ` AND sr.org_id = $${params.length}`;
+  if (enterprise_id) {
+    params.push(enterprise_id);
+    query += ` AND sr.enterprise_id = $${params.length}`;
   }
   
   if (site_id) {
@@ -42,7 +42,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
   
   const result = await pool.query(`
-    SELECT sr.*, s.name as site_name,
+    SELECT sr.*, s.name as site_name, s.site_code,
            (SELECT json_agg(json_build_object(
              'part_id', ps.part_id,
              'part_name', p.part_name,

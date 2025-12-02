@@ -89,6 +89,7 @@ router.get('/asset-reliability', asyncHandler(async (req, res) => {
       a.asset_tag,
       a.type,
       s.name as site_name,
+      s.site_code,
       COUNT(woa.work_order_id) as failure_count,
       MAX(wo.created_at) as last_failure_date
     FROM assets a
@@ -96,7 +97,7 @@ router.get('/asset-reliability', asyncHandler(async (req, res) => {
     LEFT JOIN work_order_assets woa ON a.id = woa.asset_id
     LEFT JOIN work_orders wo ON woa.work_order_id = wo.id
     WHERE wo.created_at >= CURRENT_DATE - INTERVAL '90 days' OR wo.created_at IS NULL
-    GROUP BY a.id, a.name, a.asset_tag, a.type, s.name
+    GROUP BY a.id, a.name, a.asset_tag, a.type, s.name, s.site_code
     ORDER BY failure_count DESC
     LIMIT 20
   `);

@@ -12,7 +12,7 @@ router.get('/', asyncHandler(async (req, res) => {
   const offset = (page - 1) * limit;
   
   
-  let query = 'SELECT b.*, s.name as site_name FROM buildings b LEFT JOIN sites s ON b.site_id = s.id WHERE b.is_active = true';
+  let query = 'SELECT b.*, s.name as site_name, s.site_code FROM buildings b LEFT JOIN sites s ON b.site_id = s.id WHERE b.is_active = true';
   const params = [];
   
   if (site_id) {
@@ -25,7 +25,7 @@ router.get('/', asyncHandler(async (req, res) => {
     query += ` AND (b.name ILIKE $${params.length} OR b.building_code ILIKE $${params.length})`;
   }
   
-  const countQuery = query.replace('SELECT b.*, s.name as site_name', 'SELECT COUNT(*)');
+  const countQuery = query.replace('SELECT b.*, s.name as site_name, s.site_code', 'SELECT COUNT(*)');
   const countResult = await pool.query(countQuery, params);
   const total = parseInt(countResult.rows[0].count);
   
@@ -51,7 +51,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
   
   const result = await pool.query(`
-    SELECT b.*, s.name as site_name,
+    SELECT b.*, s.name as site_name, s.site_code,
            (SELECT COUNT(*) FROM floors WHERE building_id = b.id) as floors_count
     FROM buildings b
     LEFT JOIN sites s ON b.site_id = s.id

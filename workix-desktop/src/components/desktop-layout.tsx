@@ -10,7 +10,7 @@ export function DesktopLayout({ children }: { children: ReactNode }) {
       <Navbar />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
-        <main className="flex-1 overflow-auto">
+        <main id="main-content" className="flex-1 overflow-auto" role="main" tabIndex={-1}>
           {children}
         </main>
       </div>

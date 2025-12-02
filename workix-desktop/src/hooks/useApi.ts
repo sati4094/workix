@@ -1129,11 +1129,11 @@ export function useBuildings(params?: { site_id?: string; search?: string } & Pa
   });
 }
 
-export function useBuilding(id: number) {
+export function useBuilding(id: string | number) {
   return useQuery({
     queryKey: ['building', id],
     queryFn: async () => {
-      const response = await api.buildings.getById(id);
+      const response = await api.buildings.getById(typeof id === 'string' ? parseInt(id) : id);
       return response.data?.data;
     },
     enabled: !!id,

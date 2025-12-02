@@ -12,7 +12,7 @@ router.get('/', asyncHandler(async (req, res) => {
   const offset = (page - 1) * limit;
   
   
-  let query = `SELECT f.*, b.name as building_name, b.site_id, s.name as site_name 
+  let query = `SELECT f.*, b.name as building_name, b.building_code, b.site_id, s.name as site_name, s.site_code 
                FROM floors f 
                LEFT JOIN buildings b ON f.building_id = b.id 
                LEFT JOIN sites s ON b.site_id = s.id 
@@ -41,7 +41,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
   const { id } = req.params;
   
   const result = await pool.query(`
-    SELECT f.*, b.name as building_name, b.site_id, s.name as site_name,
+    SELECT f.*, b.name as building_name, b.building_code, b.site_id, s.name as site_name, s.site_code,
            (SELECT COUNT(*) FROM spaces WHERE floor_id = f.id) as spaces_count
     FROM floors f
     LEFT JOIN buildings b ON f.building_id = b.id

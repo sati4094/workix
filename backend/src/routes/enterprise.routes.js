@@ -15,12 +15,12 @@ router.get('/', asyncHandler(async (req, res) => {
   let dataQuery = `
     SELECT 
       e.*,
-      u.name as created_by_name,
+      NULL as created_by_name,
       COUNT(DISTINCT s.id) as total_sites,
       COUNT(DISTINCT b.id) as total_buildings,
       COUNT(DISTINCT a.id) as total_assets
     FROM enterprises e
-    LEFT JOIN users u ON e.created_by = u.id
+    LEFT JOIN users u ON 1=0
     LEFT JOIN sites s ON s.enterprise_id = e.id
     LEFT JOIN buildings b ON b.site_id = s.id
     LEFT JOIN assets a ON a.building_id = b.id
@@ -65,14 +65,14 @@ router.get('/:id', asyncHandler(async (req, res) => {
   const enterpriseResult = await query(
     `SELECT 
       e.*,
-      u.name as created_by_name,
+      NULL as created_by_name,
       COUNT(DISTINCT s.id) as total_sites,
       COUNT(DISTINCT b.id) as total_buildings,
       COUNT(DISTINCT a.id) as total_assets,
       COUNT(DISTINCT wo.id) FILTER (WHERE wo.status = 'open') as open_work_orders,
       COUNT(DISTINCT wo.id) FILTER (WHERE wo.status = 'in_progress') as in_progress_work_orders
     FROM enterprises e
-    LEFT JOIN users u ON e.created_by = u.id
+    LEFT JOIN users u ON 1=0
     LEFT JOIN sites s ON s.enterprise_id = e.id
     LEFT JOIN buildings b ON b.site_id = s.id
     LEFT JOIN assets a ON a.building_id = b.id

@@ -201,27 +201,34 @@ export default function WorkOrdersPage() {
     }
   };
 
-  // Priority badge helper
+  // Priority badge helper - matches database enum values
   const getPriorityBadge = (priority: string) => {
-    const colors = {
-      Critical: 'bg-red-100 text-red-800',
-      High: 'bg-orange-100 text-orange-800',
-      Medium: 'bg-yellow-100 text-yellow-800',
-      Low: 'bg-green-100 text-green-800',
+    const colors: Record<string, string> = {
+      critical: 'bg-red-100 text-red-800',
+      high: 'bg-orange-100 text-orange-800',
+      medium: 'bg-yellow-100 text-yellow-800',
+      low: 'bg-green-100 text-green-800',
     };
-    return colors[priority as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    return colors[priority?.toLowerCase()] || 'bg-gray-100 text-gray-800';
   };
 
-  // Status badge helper
+  // Status badge helper - matches database enum values
   const getStatusBadge = (status: string) => {
-    const colors = {
-      Open: 'bg-purple-100 text-purple-800',
-      'In Progress': 'bg-yellow-100 text-yellow-800',
-      'On Hold': 'bg-orange-100 text-orange-800',
-      Completed: 'bg-green-100 text-green-800',
-      Cancelled: 'bg-gray-100 text-gray-800',
+    const colors: Record<string, string> = {
+      pending: 'bg-yellow-100 text-yellow-800',
+      acknowledged: 'bg-blue-100 text-blue-800',
+      in_progress: 'bg-purple-100 text-purple-800',
+      parts_pending: 'bg-orange-100 text-orange-800',
+      completed: 'bg-green-100 text-green-800',
+      cancelled: 'bg-gray-100 text-gray-800',
     };
-    return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    return colors[status?.toLowerCase()] || 'bg-gray-100 text-gray-800';
+  };
+
+  // Format status for display
+  const formatStatus = (status: string) => {
+    if (!status) return '';
+    return status.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
 
   return (

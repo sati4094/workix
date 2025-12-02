@@ -43,7 +43,9 @@ router.get('/work-orders', verifyToken, asyncHandler(async (req, res) => {
       wo.deleted,
       u.name as assigned_to_name,
       s.name as site_name,
+      s.site_code,
       b.name as building_name,
+      b.building_code,
       f.name as floor_name,
       sp.name as space_name
     FROM work_orders wo

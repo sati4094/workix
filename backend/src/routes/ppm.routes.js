@@ -100,6 +100,7 @@ router.get('/schedules', asyncHandler(async (req, res) => {
       a.asset_tag,
       a.type as asset_type,
       s.name as site_name,
+      s.site_code,
       u.name as assigned_technician_name
      FROM ppm_schedules ps
      JOIN ppm_plans pp ON ps.ppm_plan_id = pp.id

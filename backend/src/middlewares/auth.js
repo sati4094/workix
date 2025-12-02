@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { query } = require('../database/connection');
+const { query, pool } = require('../database/connection');
 const { AppError, asyncHandler } = require('./errorHandler');
 const { cache } = require('../config/redis');
 
@@ -48,13 +48,9 @@ const verifyToken = asyncHandler(async (req, res, next) => {
     // Attach user to request
     req.user = user;
     
-    // Set PostgreSQL session variable for Row-Level Security
-    try {
-      await query(`SET LOCAL app.current_user_id = $1`, [user.id]);
-    } catch (rlsError) {
-      // Log but don't fail if RLS context setting fails
-      console.warn('Failed to set RLS context:', rlsError.message);
-    }
+    // Note: RLS (Row-Level Security) context setting removed
+    // RLS policies will use req.user.id from application context
+    // SET LOCAL app.current_user_id requires transaction context per-query
     
     next();
   } catch (error) {

@@ -23,7 +23,7 @@ export default function LoginPage() {
       const endpoint = isLogin ? '/auth/login' : '/auth/register';
       const payload = isLogin ? { email, password } : { name, email, password };
 
-      const response = await fetch(`http://localhost:5000/api/v1${endpoint}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/v1${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -32,7 +32,7 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Authentication failed');
+        throw new Error(data.message || data.error?.message || 'Authentication failed');
       }
 
       // Store token and user using the login function
@@ -145,16 +145,26 @@ export default function LoginPage() {
           </div>
 
           <div className="mt-6 pt-6 border-t border-gray-200">
-            <p className="text-xs text-gray-600 text-center mb-3">Demo Credentials:</p>
+            <p className="text-xs text-gray-700 text-center mb-3">Demo Credentials:</p>
             <button
               onClick={() => {
-                setEmail('demo@workix.com');
-                setPassword('Demo123!');
+                setEmail('admin@workix.com');
+                setPassword('Admin@123');
                 setIsLogin(true);
               }}
               className="w-full text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded"
             >
-              Use Demo Account
+              Use Admin Account
+            </button>
+            <button
+              onClick={() => {
+                setEmail('john.tech@workix.com');
+                setPassword('Tech@123');
+                setIsLogin(true);
+              }}
+              className="w-full text-sm bg-gray-50 hover:bg-gray-100 text-gray-600 py-2 px-4 rounded mt-2"
+            >
+              Use Technician Account
             </button>
           </div>
         </div>

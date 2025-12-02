@@ -168,12 +168,19 @@ async function startServer() {
     await connectRedis();
     logger.info('Redis connected successfully');
 
-    // Start Express server
-    app.listen(PORT, () => {
+    // Start Express server and store the server instance
+    const server = app.listen(PORT, () => {
       logger.info(`🚀 Workix Backend Server running on port ${PORT}`);
       logger.info(`📍 Environment: ${process.env.NODE_ENV}`);
       logger.info(`🔗 API Base URL: http://localhost:${PORT}/api/${API_VERSION}`);
     });
+
+    // Keep the server reference to prevent garbage collection
+    server.on('close', () => {
+      logger.info('Server closed');
+    });
+
+    return server;
   } catch (error) {
     logger.error('Failed to start server:', error);
     process.exit(1);
