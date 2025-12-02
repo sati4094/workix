@@ -101,15 +101,25 @@ export default function WorkOrderDetailPage() {
     due_date: '',
   });
   
-  const { token, user } = useAuthStore();
+  const { token, user, hydrated, isAuthenticated } = useAuthStore();
+
+  // Redirect to login if not authenticated after hydration
+  useEffect(() => {
+    if (hydrated && !isAuthenticated) {
+      router.push('/login');
+    }
+  }, [hydrated, isAuthenticated, router]);
 
   useEffect(() => {
-    fetchWorkOrderDetails();
-    fetchActivities();
-    fetchChatMessages();
-    fetchTasks();
-    fetchStatusHistory();
-  }, [token, workOrderId]);
+    // Only fetch when token is available and hydrated
+    if (hydrated && token && workOrderId) {
+      fetchWorkOrderDetails();
+      fetchActivities();
+      fetchChatMessages();
+      fetchTasks();
+      fetchStatusHistory();
+    }
+  }, [hydrated, token, workOrderId]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -704,7 +714,8 @@ export default function WorkOrderDetailPage() {
     }
   };
 
-  if (loading) {
+  // Show loading while hydrating or loading data
+  if (!hydrated || loading) {
     return (
       <DesktopLayout>
         <div className="flex items-center justify-center h-screen">

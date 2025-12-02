@@ -135,7 +135,6 @@ exports.getWorkOrderById = asyncHandler(async (req, res) => {
       s.contact_phone as site_contact_phone,
       b.name as building_name,
       b.building_code,
-      p.name as project_name,
       e.name as enterprise_name,
       e.enterprise_code,
       e.name as client_name,
