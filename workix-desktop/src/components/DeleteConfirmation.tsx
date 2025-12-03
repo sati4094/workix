@@ -1,3 +1,5 @@
+import { useEffect, useRef, useCallback } from 'react';
+
 interface DeleteConfirmationProps {
   isOpen: boolean;
   onClose: () => void;
@@ -17,6 +19,52 @@ export function DeleteConfirmation({
   itemName,
   isDeleting = false,
 }: DeleteConfirmationProps) {
+  const modalRef = useRef<HTMLDivElement>(null);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Focus trap implementation
+  const handleTabKey = useCallback((e: KeyboardEvent) => {
+    if (!modalRef.current) return;
+    
+    const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+    
+    if (e.shiftKey && document.activeElement === firstElement) {
+      e.preventDefault();
+      lastElement?.focus();
+    } else if (!e.shiftKey && document.activeElement === lastElement) {
+      e.preventDefault();
+      firstElement?.focus();
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen && !isDeleting) {
+        onClose();
+      }
+      if (e.key === 'Tab' && isOpen) {
+        handleTabKey(e);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
+      // Focus cancel button when modal opens (safer default action)
+      setTimeout(() => cancelButtonRef.current?.focus(), 0);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen, onClose, isDeleting, handleTabKey]);
+
   if (!isOpen) return null;
 
   return (
@@ -30,6 +78,11 @@ export function DeleteConfirmation({
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
         <div
+          ref={modalRef}
+          role="alertdialog"
+          aria-modal="true"
+          aria-labelledby="delete-dialog-title"
+          aria-describedby="delete-dialog-description"
           className="relative bg-white rounded-lg shadow-xl max-w-md w-full"
           onClick={(e) => e.stopPropagation()}
         >
@@ -53,8 +106,8 @@ export function DeleteConfirmation({
           </div>
 
           {/* Content */}
-          <div className="px-6 pb-4 text-center">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
+          <div id="delete-dialog-description" className="px-6 pb-4 text-center">
+            <h3 id="delete-dialog-title" className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
             <p className="text-gray-600">
               {message}
               {itemName && (
@@ -68,10 +121,11 @@ export function DeleteConfirmation({
           {/* Actions */}
           <div className="bg-gray-50 px-6 py-4 rounded-b-lg flex gap-3 justify-end">
             <button
+              ref={cancelButtonRef}
               type="button"
               onClick={onClose}
               disabled={isDeleting}
-              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-purple-500 focus:outline-none"
             >
               Cancel
             </button>

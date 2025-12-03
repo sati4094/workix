@@ -52,25 +52,24 @@ Write-Host "   CORS Setting: $($corsConfig.Line)" -ForegroundColor Gray
 if ($corsConfig.Line -match "3025") {
     Write-Host "   ✅ CORS includes port 3025!`n" -ForegroundColor Green
 } else {
-    Write-Host "   ❌ CORS missing port 3025!" -ForegroundColor Red
-    Write-Host "   Update backend/.env CORS_ORIGIN to include http://localhost:3025`n" -ForegroundColor Yellow
+    Write-Host "   ❌ CORS missing port 3033!" -ForegroundColor Red
+    Write-Host "   Update backend/.env CORS_ORIGIN to include http://localhost:3033`n" -ForegroundColor Yellow
 }
 
-# Test 4: Web Admin Config
-Write-Host "Test 4: Checking web admin configuration..." -ForegroundColor Yellow
-if (Test-Path "web-admin\.env.local") {
-    $apiUrl = Get-Content "web-admin\.env.local" | Select-String "NEXT_PUBLIC_API_URL"
+# Test 4: Desktop App Config
+Write-Host "Test 4: Checking desktop app configuration..." -ForegroundColor Yellow
+if (Test-Path "workix-desktop\.env.local") {
+    $apiUrl = Get-Content "workix-desktop\.env.local" | Select-String "NEXT_PUBLIC_API_URL"
     Write-Host "   API URL: $($apiUrl.Line)" -ForegroundColor Gray
     Write-Host "   ✅ .env.local exists!`n" -ForegroundColor Green
 } else {
-    Write-Host "   ❌ .env.local not found!" -ForegroundColor Red
-    Write-Host "   Create web-admin/.env.local with: NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1`n" -ForegroundColor Yellow
+    Write-Host "   ⚠️ .env.local not found (optional - uses default http://localhost:5000/api/v1)`n" -ForegroundColor Yellow
 }
 
 # Test 5: Port Status
 Write-Host "Test 5: Checking if ports are listening..." -ForegroundColor Yellow
 $backend = netstat -an | Select-String ":5000.*LISTENING"
-$webapp = netstat -an | Select-String ":3025.*LISTENING"
+$webapp = netstat -an | Select-String ":3033.*LISTENING"
 
 if ($backend) {
     Write-Host "   ✅ Backend listening on port 5000" -ForegroundColor Green

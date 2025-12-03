@@ -3,7 +3,8 @@ import { useAuthStore } from '@/store';
 import type {
   WorkOrder,
   Asset,
-  Client,
+  Enterprise,
+  Client, // @deprecated - use Enterprise instead
   Project,
   Site,
   User,
@@ -105,22 +106,22 @@ export const api = {
     delete: (id: string) => apiClient.delete(`/assets/${id}`),
   },
 
-  // Enterprises (formerly Clients)
+  // Enterprises (Primary naming convention)
   enterprises: {
     getAll: (params?: PaginationParams) => apiClient.get('/enterprises', { params }),
     getById: (id: string) => apiClient.get(`/enterprises/${id}`),
-    create: (data: Partial<Client>) => apiClient.post('/enterprises', data),
-    update: (id: string, data: Partial<Client>) => apiClient.patch(`/enterprises/${id}`, data),
+    create: (data: Partial<Enterprise>) => apiClient.post('/enterprises', data),
+    update: (id: string, data: Partial<Enterprise>) => apiClient.patch(`/enterprises/${id}`, data),
     delete: (id: string) => apiClient.delete(`/enterprises/${id}`),
     getStats: (id: string) => apiClient.get(`/enterprises/${id}/stats`),
   },
 
-  // Legacy clients endpoint (for backward compatibility)
+  /** @deprecated Use api.enterprises instead - kept for backward compatibility */
   clients: {
     getAll: (params?: PaginationParams) => apiClient.get('/enterprises', { params }),
     getById: (id: string) => apiClient.get(`/enterprises/${id}`),
-    create: (data: Partial<Client>) => apiClient.post('/enterprises', data),
-    update: (id: string, data: Partial<Client>) => apiClient.patch(`/enterprises/${id}`, data),
+    create: (data: Partial<Enterprise>) => apiClient.post('/enterprises', data),
+    update: (id: string, data: Partial<Enterprise>) => apiClient.patch(`/enterprises/${id}`, data),
     delete: (id: string) => apiClient.delete(`/enterprises/${id}`),
   },
 

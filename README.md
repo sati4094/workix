@@ -1,12 +1,12 @@
 # Workix - EPC Service Management Platform
 
-> A comprehensive, AI-powered service lifecycle management system for Energy Performance Contracting (EPC) projects, featuring a mobile app for field technicians and a web admin portal for internal teams.
+> A comprehensive, AI-powered service lifecycle management system for Energy Performance Contracting (EPC) projects, featuring a mobile app for field technicians and a Tauri desktop app for internal teams.
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![License](https://img.shields.io/badge/license-Proprietary-red.svg)
 ![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-green.svg)
 ![React Native](https://img.shields.io/badge/react--native-0.73-blue.svg)
-![Next.js](https://img.shields.io/badge/next.js-14-black.svg)
+![Tauri](https://img.shields.io/badge/tauri-2.0-blue.svg)
 
 ## 📋 Table of Contents
 
@@ -64,7 +64,7 @@ Workix is a modern, enterprise-grade service management platform designed specif
   - Task checklists
   - Automated scheduling
 
-### For Internal Teams (Web Admin)
+### For Internal Teams (Desktop App)
 
 - **Dashboard & Analytics**
   - Real-time KPI monitoring
@@ -102,8 +102,8 @@ Workix follows a modern, scalable three-tier architecture:
 ┌─────────────────────────────────────────────────────────┐
 │                     Frontend Layer                       │
 │  ┌──────────────────┐         ┌───────────────────┐    │
-│  │   Mobile App     │         │   Web Admin       │    │
-│  │  (React Native)  │         │   (Next.js)       │    │
+│  │   Mobile App     │         │   Desktop App     │    │
+│  │  (React Native)  │         │ (Tauri + Next.js) │    │
 │  └──────────────────┘         └───────────────────┘    │
 └─────────────────┬───────────────────┬──────────────────┘
                   │                   │
@@ -188,22 +188,22 @@ npx expo start
 # Or press 'a' for Android emulator, 'i' for iOS simulator
 ```
 
-### 4. Web Admin Setup
+### 4. Desktop App Setup
 
 ```bash
-cd web-admin
+cd workix-desktop
 
 # Install dependencies
 npm install
 
-# Configure API URL
-echo "NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1" > .env.local
-
-# Start development server
+# Start development server (web mode)
 npm run dev
+
+# Or start as Tauri desktop app
+npm run tauri dev
 ```
 
-Web admin will be available at `http://localhost:3000`
+Desktop app will be available at `http://localhost:3033` (web mode) or as a native app
 
 ### 5. Login with Demo Credentials
 
@@ -230,7 +230,7 @@ After seeding the database:
 |-------------|-------------------|---------------|
 | ![Home](docs/screenshots/mobile-home.png) | ![Detail](docs/screenshots/mobile-detail.png) | ![Activity](docs/screenshots/mobile-activity.png) |
 
-### Web Admin
+### Desktop App
 
 | Dashboard | Work Orders | Analytics |
 |-----------|-------------|-----------|
@@ -259,9 +259,9 @@ After seeding the database:
 - **Images**: Expo Image Picker & Camera
 - **Utilities**: date-fns
 
-### Web Admin
-- **Framework**: Next.js 14 (App Router)
-- **Language**: TypeScript
+### Desktop App
+- **Framework**: Tauri 2.0 + Next.js 14 (App Router)
+- **Language**: TypeScript + Rust
 - **State Management**: Zustand
 - **Data Fetching**: TanStack Query (React Query)
 - **UI Components**: Shadcn/ui
@@ -299,13 +299,16 @@ workix/
 │   ├── app.json            # Expo configuration
 │   └── package.json
 │
-├── web-admin/              # Next.js Admin Portal
+├── workix-desktop/         # Tauri Desktop App
 │   ├── src/
 │   │   ├── app/           # Next.js app directory
 │   │   ├── components/    # React components
 │   │   │   └── ui/        # Shadcn/ui components
+│   │   ├── hooks/         # Custom React hooks
 │   │   ├── lib/           # Utilities and API client
-│   │   └── store/         # State management
+│   │   ├── store/         # State management
+│   │   └── types/         # TypeScript types
+│   ├── src-tauri/         # Tauri/Rust backend
 │   ├── public/            # Static files
 │   ├── package.json
 │   └── tsconfig.json

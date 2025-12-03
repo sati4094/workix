@@ -30,11 +30,9 @@ export default function DashboardPage() {
       setLoading(true);
       setError('');
       const response = await apiClient.getAnalytics();
-      console.log('Dashboard API Response:', response);
       
       // The API client returns response.data directly, so response.kpis is the correct path
       const kpis = response?.kpis || {};
-      console.log('KPIs:', kpis);
       
       setStats({
         totalWorkOrders: kpis.total_work_orders || 0,
@@ -45,7 +43,6 @@ export default function DashboardPage() {
     } catch (err: any) {
       const errorMsg = err?.message || 'Failed to load dashboard data';
       setError(errorMsg);
-      console.error('Dashboard load error:', err);
     } finally {
       setLoading(false);
     }
@@ -53,7 +50,7 @@ export default function DashboardPage() {
 
   const StatCard = ({ label, value, icon, gradient }: any) => (
     <div className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${gradient} p-6 text-white shadow-lg hover:shadow-2xl transition-all hover:scale-105 cursor-pointer`}>
-      <div className="absolute top-0 right-0 opacity-10 transform translate-x-4 -translate-y-4">
+      <div className="absolute top-0 right-0 opacity-10 transform translate-x-4 -translate-y-4" aria-hidden="true">
         <div className="text-9xl">{icon}</div>
       </div>
       <div className="relative z-10">
@@ -71,12 +68,12 @@ export default function DashboardPage() {
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
-            <span className="text-3xl">{icon}</span>
+            <span className="text-3xl" aria-hidden="true">{icon}</span>
             <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
           </div>
           <p className="text-sm text-gray-600">{description}</p>
         </div>
-        <span className="text-gray-400 group-hover:text-purple-600 transition-colors">→</span>
+        <span className="text-gray-400 group-hover:text-purple-600 transition-colors" aria-hidden="true">→</span>
       </div>
     </div>
   );

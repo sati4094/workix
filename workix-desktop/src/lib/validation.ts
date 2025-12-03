@@ -48,6 +48,41 @@ export const workOrderSchema = z.object({
     .optional(),
 });
 
+// Lenient schema for form validation (allows empty optional fields)
+export const workOrderFormSchema = z.object({
+  title: z.string()
+    .min(3, 'Title must be at least 3 characters')
+    .max(200, 'Title must not exceed 200 characters'),
+  
+  description: z.string()
+    .max(5000, 'Description must not exceed 5000 characters')
+    .optional()
+    .or(z.literal('')),
+  
+  enterprise_id: z.string().optional().or(z.literal('')),
+  
+  site_id: z.string().optional().or(z.literal('')),
+  
+  building_id: z.number().optional(),
+  floor_id: z.number().optional(),
+  space_id: z.number().optional(),
+  building: z.string().optional().or(z.literal('')),
+  asset_id: z.string().optional().or(z.literal('')),
+  location: z.string().optional().or(z.literal('')),
+  
+  priority: z.enum(['critical', 'high', 'medium', 'low']).default('medium'),
+  
+  status: z.enum(['pending', 'acknowledged', 'in_progress', 'on_hold', 'completed', 'cancelled', 'closed'])
+    .default('pending'),
+  
+  assigned_to: z.string().optional().or(z.literal('')),
+  
+  scheduled_date: z.string().optional().or(z.literal('')),
+  due_date: z.string().optional().or(z.literal('')),
+});
+
+export type WorkOrderFormData = z.infer<typeof workOrderFormSchema>;
+
 export const workOrderActivitySchema = z.object({
   work_order_id: z.string().uuid(),
   
@@ -480,7 +515,8 @@ export const registerSchema = z.object({
 // Export Types from Schemas
 // ========================================
 
-export type WorkOrderFormData = z.infer<typeof workOrderSchema>;
+// WorkOrderFormData is exported above with the lenient form schema
+export type WorkOrderApiData = z.infer<typeof workOrderSchema>;
 export type AssetFormData = z.infer<typeof assetSchema>;
 export type EnterpriseFormData = z.infer<typeof enterpriseSchema>;
 export type ClientFormData = z.infer<typeof clientSchema>; // Legacy alias

@@ -3,10 +3,12 @@
 import { ReactNode } from 'react';
 import { Navbar } from './navbar';
 import { Sidebar } from './sidebar';
+import { ConnectionStatus, ConnectionBanner } from './ConnectionStatus';
 
 export function DesktopLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex flex-col h-screen bg-gray-50">
+      <ConnectionBanner />
       <Navbar />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
@@ -14,6 +16,7 @@ export function DesktopLayout({ children }: { children: ReactNode }) {
           {children}
         </main>
       </div>
+      <ConnectionStatus />
     </div>
   );
 }

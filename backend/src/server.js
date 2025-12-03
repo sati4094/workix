@@ -104,8 +104,18 @@ const limiter = rateLimit({
 });
 app.use(`/api/${API_VERSION}/`, limiter);
 
-// Health check endpoint
+// Health check endpoint (root level)
 app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV
+  });
+});
+
+// Health check endpoint (API versioned - for frontend)
+app.get(`/api/${API_VERSION}/health`, (req, res) => {
   res.status(200).json({
     status: 'healthy',
     timestamp: new Date().toISOString(),

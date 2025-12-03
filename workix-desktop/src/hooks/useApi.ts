@@ -4,7 +4,8 @@ import { toast } from 'react-hot-toast';
 import type {
   WorkOrder,
   Asset,
-  Client,
+  Enterprise,
+  Client, // @deprecated - use Enterprise instead
   Project,
   Site,
   User,
@@ -27,8 +28,15 @@ export const queryKeys = {
   assets: (filters?: AssetFilters & PaginationParams) => ['assets', filters] as const,
   asset: (id: string) => ['asset', id] as const,
   
-  clients: (params?: PaginationParams) => ['clients', params] as const,
-  client: (id: string) => ['client', id] as const,
+  // Enterprises (primary naming)
+  enterprises: (params?: PaginationParams) => ['enterprises', params] as const,
+  enterprise: (id: string) => ['enterprise', id] as const,
+  enterpriseStats: (id: string) => ['enterpriseStats', id] as const,
+  
+  /** @deprecated Use 'enterprises' instead - kept for backward compatibility */
+  clients: (params?: PaginationParams) => ['enterprises', params] as const,
+  /** @deprecated Use 'enterprise' instead - kept for backward compatibility */
+  client: (id: string) => ['enterprise', id] as const,
   
   projects: (params?: PaginationParams) => ['projects', params] as const,
   project: (id: string) => ['project', id] as const,
@@ -227,27 +235,34 @@ export function useDeleteAsset() {
 }
 
 // ============================================================================
-// Client Hooks
+// Client Hooks (DEPRECATED - Use Enterprise Hooks instead)
+// Kept for backward compatibility, internally uses enterprises API
 // ============================================================================
 
+/**
+ * @deprecated Use useEnterprises() instead
+ */
 export function useClients(params?: PaginationParams) {
   return useQuery({
-    queryKey: queryKeys.clients(params),
+    queryKey: queryKeys.enterprises(params),
     queryFn: async () => {
-      const response = await api.clients.getAll(params);
-      return response.data?.data?.clients || [];
+      const response = await api.enterprises.getAll(params);
+      return response.data?.data?.enterprises || [];
     },
   });
 }
 
+/**
+ * @deprecated Use useCreateEnterprise() instead
+ */
 export function useCreateClient() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (data: Partial<Client>) => api.clients.create(data),
+    mutationFn: (data: Partial<Enterprise>) => api.enterprises.create(data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
-      toast.success('Client created successfully');
+      queryClient.invalidateQueries({ queryKey: ['enterprises'] });
+      toast.success('Enterprise created successfully');
     },
     onError: (error) => {
       toast.error(handleApiError(error));
@@ -255,15 +270,18 @@ export function useCreateClient() {
   });
 }
 
+/**
+ * @deprecated Use useUpdateEnterprise() instead
+ */
 export function useUpdateClient() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Client> }) =>
-      api.clients.update(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<Enterprise> }) =>
+      api.enterprises.update(id, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
-      toast.success('Client updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['enterprises'] });
+      toast.success('Enterprise updated successfully');
     },
     onError: (error) => {
       toast.error(handleApiError(error));
@@ -271,14 +289,17 @@ export function useUpdateClient() {
   });
 }
 
+/**
+ * @deprecated Use useDeleteEnterprise() instead
+ */
 export function useDeleteClient() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (id: string) => api.clients.delete(id),
+    mutationFn: (id: string) => api.enterprises.delete(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
-      toast.success('Client deleted successfully');
+      queryClient.invalidateQueries({ queryKey: ['enterprises'] });
+      toast.success('Enterprise deleted successfully');
     },
     onError: (error) => {
       toast.error(handleApiError(error));
@@ -287,12 +308,12 @@ export function useDeleteClient() {
 }
 
 // ============================================================================
-// Enterprise Hooks (NEW)
+// Enterprise Hooks (Primary)
 // ============================================================================
 
 export function useEnterprises(params?: PaginationParams) {
   return useQuery({
-    queryKey: ['enterprises', params],
+    queryKey: queryKeys.enterprises(params),
     queryFn: async () => {
       const response = await api.enterprises.getAll(params);
       return response.data?.data?.enterprises || [];
@@ -302,7 +323,7 @@ export function useEnterprises(params?: PaginationParams) {
 
 export function useEnterprise(id: string) {
   return useQuery({
-    queryKey: ['enterprise', id],
+    queryKey: queryKeys.enterprise(id),
     queryFn: async () => {
       const response = await api.enterprises.getById(id);
       return response.data.data;
@@ -313,7 +334,7 @@ export function useEnterprise(id: string) {
 
 export function useEnterpriseStats(id: string) {
   return useQuery({
-    queryKey: ['enterpriseStats', id],
+    queryKey: queryKeys.enterpriseStats(id),
     queryFn: async () => {
       const response = await api.enterprises.getStats(id);
       return response.data.data;
@@ -326,7 +347,7 @@ export function useCreateEnterprise() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: (data: Partial<Client>) => api.enterprises.create(data),
+    mutationFn: (data: Partial<Enterprise>) => api.enterprises.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['enterprises'] });
       toast.success('Enterprise created successfully');
@@ -341,7 +362,7 @@ export function useUpdateEnterprise() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Client> }) =>
+    mutationFn: ({ id, data }: { id: string; data: Partial<Enterprise> }) =>
       api.enterprises.update(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['enterprises'] });

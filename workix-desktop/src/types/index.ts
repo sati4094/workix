@@ -92,12 +92,14 @@ export interface WorkOrder {
   asset_name?: string;
   asset_tag?: string;
   
-  // Legacy relationships
+  // Legacy relationships (use enterprise_id instead)
   project_id?: string;
   project_name?: string;
   portfolio_id?: string;
   portfolio_name?: string;
+  /** @deprecated Use enterprise_id instead */
   client_id?: string;
+  /** @deprecated Use enterprise_name instead */
   client_name?: string;
   
   // Location details
@@ -269,7 +271,7 @@ export interface Enterprise {
   created_by_name?: string;
 }
 
-// Legacy alias for backward compatibility
+/** @deprecated Use Enterprise type instead - kept for backward compatibility */
 export type Client = Enterprise;
 
 export interface Project {
@@ -278,8 +280,9 @@ export interface Project {
   description?: string;
   enterprise_id?: string;
   enterprise_name?: string;
-  // Legacy fields for backward compatibility
+  /** @deprecated Use enterprise_id instead */
   client_id?: string;
+  /** @deprecated Use enterprise_name instead */
   client_name?: string;
   manager_id?: string;
   manager_name?: string;
@@ -542,6 +545,8 @@ export interface WorkOrderFilters {
   priority?: WorkOrderPriority | WorkOrderPriority[];
   assigned_to?: string;
   site_id?: string;
+  building_id?: string | number;
+  enterprise_id?: string;
   source?: WorkOrderSource;
   date_from?: string;
   date_to?: string;
@@ -553,6 +558,8 @@ export interface AssetFilters {
   category?: string;
   status?: AssetStatus;
   site_id?: string;
+  building_id?: string | number;
+  enterprise_id?: string;
   criticality?: string;
   search?: string;
 }

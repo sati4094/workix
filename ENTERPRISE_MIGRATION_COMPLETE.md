@@ -118,7 +118,7 @@ Enterprise → Site → Building → Asset → Work Order
 - `workix-desktop/src/lib/validation.ts` ✅
 
 ### Web Admin
-- `web-admin/src/lib/api.ts` ✅ (Already had enterprise/building methods)
+- `workix-desktop/src/lib/api.ts` ✅ (Already had enterprise/building methods)
 
 ---
 

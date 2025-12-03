@@ -216,48 +216,48 @@ eas submit --platform android
 - Set content rating
 - Submit for review
 
-### Web Admin Deployment
+### Desktop App Deployment
 
-#### Option 1: Vercel (Recommended)
+#### Option 1: Build Installers
 
 ```bash
-cd web-admin
+cd workix-desktop
 
-# Install Vercel CLI
-npm i -g vercel
+# Build for all platforms
+npm run tauri build
 
-# Deploy
-vercel --prod
-
-# Configure environment variables in Vercel dashboard:
-# - NEXT_PUBLIC_API_URL
+# Platform-specific builds
+npm run tauri build -- --target x86_64-pc-windows-msvc  # Windows
+npm run tauri build -- --target x86_64-apple-darwin     # macOS
+npm run tauri build -- --target x86_64-unknown-linux-gnu # Linux
 ```
 
-#### Option 2: Netlify
+Installers will be in `src-tauri/target/release/bundle/`
 
-```bash
-cd web-admin
+#### Option 2: Auto-Update Server
 
-# Install Netlify CLI
-npm i -g netlify-cli
-
-# Build
-npm run build
-
-# Deploy
-netlify deploy --prod --dir=.next
+Configure Tauri's built-in updater in `src-tauri/tauri.conf.json`:
+```json
+{
+  "updater": {
+    "active": true,
+    "endpoints": ["https://releases.yourdomain.com/{{target}}/{{current_version}}"],
+    "dialog": true,
+    "pubkey": "YOUR_PUBLIC_KEY"
+  }
+}
 ```
 
-#### Option 3: Self-Hosted
+#### Option 3: Web Mode (Development/Testing)
 
 ```bash
-cd web-admin
+cd workix-desktop
 
-# Build for production
+# Build for web
 npm run build
 
 # Start with PM2
-pm2 start npm --name "workix-web" -- start
+pm2 start npm --name "workix-desktop" -- start
 pm2 save
 ```
 
@@ -268,7 +268,7 @@ server {
     server_name admin.yourdomain.com;
 
     location / {
-        proxy_pass http://localhost:3000;
+        proxy_pass http://localhost:3033;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';

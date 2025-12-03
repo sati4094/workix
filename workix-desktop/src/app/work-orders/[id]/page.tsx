@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useAuthStore } from '@/store';
 import { useRouter, useParams } from 'next/navigation';
 import { DesktopLayout } from '@/components/desktop-layout';
+import { Breadcrumb } from '@/components/Breadcrumb';
 import { 
   Clock, 
   User, 
@@ -150,7 +151,6 @@ export default function WorkOrderDetailPage() {
       }
       
       const data = await response.json();
-      console.log('Work Order Response:', data);
       
       if (!data.success) {
         throw new Error(data.message || 'Failed to fetch work order');
@@ -158,7 +158,6 @@ export default function WorkOrderDetailPage() {
       
       // Backend returns: { success: true, data: { work_order: {...} } }
       const workOrderData = data.data?.work_order || data.data;
-      console.log('Work Order Data:', workOrderData);
       
       if (!workOrderData) {
         throw new Error('No work order data received');
@@ -260,9 +259,6 @@ export default function WorkOrderDetailPage() {
 
   const handleStatusChange = async (newStatus: string) => {
     try {
-      console.log('Updating status to:', newStatus);
-      console.log('Current work order:', workOrder);
-
       const response = await fetch(
         `http://localhost:5000/api/v1/work-orders/${workOrderId}`,
         {
@@ -278,7 +274,6 @@ export default function WorkOrderDetailPage() {
       );
 
       const responseData = await response.json();
-      console.log('Update response:', responseData);
 
       if (!response.ok) {
         throw new Error(responseData.message || 'Failed to update status');
@@ -395,8 +390,6 @@ export default function WorkOrderDetailPage() {
     }
 
     try {
-      console.log('Sending to AI:', { text: workOrder.description, context: 'observation' });
-      
       // Enhance the work order description using AI
       const response = await fetch(
         `http://localhost:5000/api/v1/ai/enhance-text`,
@@ -414,7 +407,6 @@ export default function WorkOrderDetailPage() {
       );
 
       const data = await response.json();
-      console.log('AI Response:', data);
 
       if (!response.ok) {
         const errorMsg = data.message || data.error || 'AI enhancement request failed';
@@ -430,8 +422,6 @@ export default function WorkOrderDetailPage() {
       if (!enhancedText) {
         throw new Error('No enhanced text received from AI service');
       }
-
-      console.log('Enhanced text received:', enhancedText.substring(0, 100) + '...');
       
       // Update work order with enhanced description
       const updateResponse = await fetch(
@@ -449,7 +439,6 @@ export default function WorkOrderDetailPage() {
       );
 
       const updateData = await updateResponse.json();
-      console.log('Update Response:', updateData);
 
       if (!updateResponse.ok) {
         throw new Error(updateData.message || 'Failed to update work order with enhanced text');
@@ -731,6 +720,16 @@ export default function WorkOrderDetailPage() {
   return (
     <DesktopLayout>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+        {/* Breadcrumb Navigation */}
+        <div className="bg-white border-b px-6 py-2">
+          <Breadcrumb 
+            items={[
+              { label: 'Work Orders', href: '/work-orders' },
+              { label: workOrder?.work_order_number || 'Details' }
+            ]} 
+          />
+        </div>
+
         {/* Header Section */}
         <div className="bg-white border-b shadow-sm sticky top-0 z-10">
           <div className="max-w-7xl mx-auto px-6 py-4">
@@ -738,7 +737,8 @@ export default function WorkOrderDetailPage() {
               <div className="flex items-center gap-4">
                 <button
                   onClick={() => router.back()}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                  aria-label="Go back"
                 >
                   <ArrowLeft className="w-5 h-5 text-gray-600" />
                 </button>

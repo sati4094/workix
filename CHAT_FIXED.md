@@ -208,9 +208,9 @@ If you have a work order detail page open, refresh it (F5)
 
 ## 📝 **Files Updated:**
 
-1. `web-admin/src/lib/api.ts` - Added activity functions
-2. `web-admin/src/app/dashboard/work-orders/[id]/chat.tsx` - Fixed username & images
-3. `web-admin/src/app/dashboard/work-orders/[id]/page.tsx` - Updated activity display
+1. `workix-desktop/src/lib/api.ts` - Added activity functions
+2. `workix-desktop/src/app/dashboard/work-orders/[id]/chat.tsx` - Fixed username & images
+3. `workix-desktop/src/app/dashboard/work-orders/[id]/page.tsx` - Updated activity display
 
 ---
 

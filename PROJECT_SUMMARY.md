@@ -58,40 +58,41 @@ Congratulations! You now have a **complete, production-ready EPC Service Managem
 - `mobile/src/services/offlineService.js` - Offline sync logic
 - `mobile/src/store/` - State management
 
-### ✅ Web Admin Portal (Complete Foundation)
-**20+ Files | TypeScript | Modern UI**
+### ✅ Desktop App (Complete Foundation)
+**40+ Files | TypeScript | Tauri | Modern UI**
 
 - ✅ Next.js 14 with App Router
+- ✅ Tauri 2.0 for native desktop
 - ✅ TypeScript for type safety
 - ✅ Authentication system
 - ✅ API client with interceptors
 - ✅ State management with Zustand
-- ✅ Shadcn/ui component library (5 components)
+- ✅ Shadcn/ui component library
 - ✅ Tailwind CSS styling
 - ✅ Responsive layout structure
-- ✅ Login page with validation
+- ✅ Full CRUD for all entities
 
 **Key Files:**
-- `web-admin/src/app/layout.tsx` - Root layout
-- `web-admin/src/app/login/page.tsx` - Login page
-- `web-admin/src/lib/api.ts` - API client
-- `web-admin/src/store/authStore.ts` - Auth state
-- `web-admin/src/components/ui/` - UI components
+- `workix-desktop/src/app/layout.tsx` - Root layout
+- `workix-desktop/src/app/login/page.tsx` - Login page
+- `workix-desktop/src/lib/api.ts` - API client
+- `workix-desktop/src/store/authStore.ts` - Auth state
+- `workix-desktop/src/components/ui/` - UI components
 
 ## 📊 Project Statistics
 
 ### Lines of Code
 - **Backend**: ~3,500 lines
 - **Mobile**: ~2,500 lines  
-- **Web Admin**: ~1,000 lines
-- **Total**: ~7,000+ lines of production code
+- **Desktop App**: ~5,000 lines
+- **Total**: ~11,000+ lines of production code
 
 ### Files Created
 - **Backend**: 30+ files
 - **Mobile**: 25+ files
-- **Web Admin**: 20+ files
+- **Desktop App**: 50+ files
 - **Documentation**: 3 comprehensive guides
-- **Total**: 75+ files
+- **Total**: 100+ files
 
 ### Database Schema
 - **Tables**: 15 main tables
@@ -229,13 +230,13 @@ npx expo start
 # Scan QR code or press 'a' for Android
 ```
 
-### 3. Start the Web Admin
+### 3. Start the Desktop App
 ```bash
-cd web-admin
+cd workix-desktop
 npm install
-echo "NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1" > .env.local
 npm run dev
-# Visit http://localhost:3000
+# Visit http://localhost:3033
+# Or run: npm run tauri dev (for native app)
 ```
 
 ### 4. Login

@@ -1,4 +1,5 @@
 import { ReactNode, useState } from 'react';
+import { FileQuestion, Plus } from 'lucide-react';
 
 interface Column<T> {
   key: string;
@@ -15,6 +16,8 @@ interface DataTableProps<T> {
   onRowClick?: (row: T) => void;
   actions?: (row: T) => ReactNode;
   emptyMessage?: string;
+  emptyActionLabel?: string;
+  onEmptyAction?: () => void;
   loading?: boolean;
 }
 
@@ -26,6 +29,8 @@ export function DataTable<T extends Record<string, any>>({
   onRowClick,
   actions,
   emptyMessage = 'No data available',
+  emptyActionLabel,
+  onEmptyAction,
   loading = false,
 }: DataTableProps<T>) {
   // Use all DB columns for menu if provided
@@ -63,7 +68,19 @@ export function DataTable<T extends Record<string, any>>({
     return (
       <div className="relative">
         <div className="bg-white rounded-lg shadow p-12 text-center">
-          <div className="text-gray-400 text-lg">{emptyMessage}</div>
+          <div className="flex flex-col items-center justify-center">
+            <FileQuestion className="w-16 h-16 text-gray-300 mb-4" />
+            <p className="text-gray-500 text-lg mb-2">{emptyMessage}</p>
+            {emptyActionLabel && onEmptyAction && (
+              <button
+                onClick={onEmptyAction}
+                className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition-all shadow-md focus:ring-2 focus:ring-purple-500 focus:outline-none"
+              >
+                <Plus className="w-4 h-4" />
+                {emptyActionLabel}
+              </button>
+            )}
+          </div>
         </div>
         <div className="absolute top-3 right-5 z-10">
           <button

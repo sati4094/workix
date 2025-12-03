@@ -74,22 +74,22 @@ npx expo start
 - ✅ Work order management
 - ✅ PPM scheduling
 
-### 3. Web Admin Portal Setup
+### 3. Desktop App Setup
 
 ```bash
-cd web-admin
+cd workix-desktop
 
 # Install dependencies
 npm install
 
-# Create .env.local
-echo "NEXT_PUBLIC_API_URL=http://localhost:5000/api/v1" > .env.local
-
-# Start development server
+# Start development server (web mode)
 npm run dev
+
+# Or start as Tauri desktop app
+npm run tauri dev
 ```
 
-The admin portal will start at `http://localhost:3000`
+The desktop app will start at `http://localhost:3033` (web mode) or as a native application
 
 ## 🔑 Demo Credentials
 
@@ -112,7 +112,7 @@ After running `npm run seed` in the backend:
 The system uses a comprehensive relational schema with the following key entities:
 
 - **users** - All system users (admins, technicians, analysts, clients)
-- **clients** - Customer organizations
+- **enterprises** - Customer organizations
 - **projects** - EPC contracts
 - **sites** - Physical locations
 - **assets** - Equipment (chillers, AHUs, etc.)
@@ -280,12 +280,15 @@ workix/
 │   ├── app.json
 │   └── package.json
 │
-├── web-admin/
+├── workix-desktop/
 │   ├── src/
 │   │   ├── app/             # Next.js app directory
 │   │   ├── components/      # React components
+│   │   ├── hooks/           # Custom React hooks
 │   │   ├── lib/             # API client, utilities
-│   │   └── store/           # Zustand stores
+│   │   ├── store/           # Zustand stores
+│   │   └── types/           # TypeScript types
+│   ├── src-tauri/           # Tauri/Rust backend
 │   ├── package.json
 │   └── tsconfig.json
 │
@@ -357,18 +360,15 @@ eas build --platform android
 eas submit --platform android
 ```
 
-### Web Admin
+### Desktop App
 
-**Vercel (Recommended):**
+**Build for distribution:**
 ```bash
-cd web-admin
-vercel --prod
+cd workix-desktop
+npm run tauri build
 ```
 
-**Other Options:**
-- Netlify
-- AWS Amplify
-- Self-hosted with PM2
+This will create platform-specific installers in `src-tauri/target/release/bundle/`
 
 ## 📈 Performance Optimizations
 
@@ -404,8 +404,8 @@ npm test
 cd mobile
 npm test
 
-# Web Admin
-cd web-admin
+# Desktop App
+cd workix-desktop
 npm test
 ```
 

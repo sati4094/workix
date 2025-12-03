@@ -10,9 +10,11 @@ import { CrudModal } from '@/components/CrudModal';
 import { SearchFilter } from '@/components/SearchFilter';
 import { DeleteConfirmation } from '@/components/DeleteConfirmation';
 import { useWorkOrders, useCreateWorkOrder, useUpdateWorkOrder, useDeleteWorkOrder, useEnterprises, useProjects, useSites, useAssets, useUsers } from '@/hooks/useApi';
-import { workOrderSchema } from '@/lib/validation';
+import { workOrderFormSchema, type WorkOrderFormData } from '@/lib/validation';
+import { api } from '@/lib/api';
 import type { WorkOrder, CreateWorkOrderDTO } from '@/types';
 import LocationSelector from '@/components/LocationSelector';
+import { Loader2, Upload, X, FileText, AlertCircle } from 'lucide-react';
 
 export default function WorkOrdersPage() {
   const router = useRouter();
@@ -23,6 +25,9 @@ export default function WorkOrdersPage() {
   const [priorityFilter, setPriorityFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploadProgress, setUploadProgress] = useState<string>('');
+  const [uploadError, setUploadError] = useState<string>('');
+  const [isUploading, setIsUploading] = useState(false);
   const [selectedEnterprise, setSelectedEnterprise] = useState<string>('');
   const [locationData, setLocationData] = useState({
     siteId: '',
@@ -50,7 +55,8 @@ export default function WorkOrdersPage() {
   }, [sites, selectedEnterprise]);
 
   // Form setup with Zod validation
-  const form = useForm<any>({
+  const form = useForm<WorkOrderFormData>({
+    resolver: zodResolver(workOrderFormSchema),
     defaultValues: {
       title: '',
       description: '',
@@ -164,6 +170,7 @@ export default function WorkOrdersPage() {
 
   const handleSubmit = form.handleSubmit(async (data) => {
     try {
+      setUploadError('');
       // Convert date to ISO format if provided and add location IDs
       const formattedData = {
         ...data,
@@ -175,20 +182,48 @@ export default function WorkOrdersPage() {
         scheduled_date: data.scheduled_date ? new Date(data.scheduled_date).toISOString() : undefined,
         asset_ids: data.asset_id ? [data.asset_id] : [],
       };
-      
-      // TODO: Handle file uploads to backend
-      if (selectedFiles.length > 0) {
-        console.log('Files to upload:', selectedFiles);
-        // formattedData.attachments = await uploadFiles(selectedFiles);
-      }
+
+      let workOrderId: string;
 
       if (editingWorkOrder) {
         await updateMutation.mutateAsync({ id: editingWorkOrder.id, data: formattedData });
+        workOrderId = editingWorkOrder.id;
       } else {
-        await createMutation.mutateAsync(formattedData);
+        const result = await createMutation.mutateAsync(formattedData);
+        workOrderId = result?.id || result?.data?.id;
       }
+
+      // Handle file uploads to backend
+      if (selectedFiles.length > 0 && workOrderId) {
+        setIsUploading(true);
+        setUploadProgress('Uploading files...');
+        
+        try {
+          for (let i = 0; i < selectedFiles.length; i++) {
+            const file = selectedFiles[i];
+            setUploadProgress(`Uploading file ${i + 1} of ${selectedFiles.length}: ${file.name}`);
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('work_order_id', workOrderId);
+            formData.append('file_name', file.name);
+            formData.append('file_type', file.type || 'application/octet-stream');
+            
+            await api.attachments.workOrders.upload(formData);
+          }
+          setUploadProgress('All files uploaded successfully!');
+        } catch (uploadErr: any) {
+          console.error('Error uploading files:', uploadErr);
+          setUploadError(`File upload failed: ${uploadErr?.response?.data?.error || uploadErr.message}`);
+          // Work order was still created, just files failed
+        } finally {
+          setIsUploading(false);
+        }
+      }
+
       setIsModalOpen(false);
       setSelectedFiles([]);
+      setUploadProgress('');
     } catch (error) {
       console.error('Error submitting form:', error);
     }
@@ -218,9 +253,11 @@ export default function WorkOrdersPage() {
       pending: 'bg-yellow-100 text-yellow-800',
       acknowledged: 'bg-blue-100 text-blue-800',
       in_progress: 'bg-purple-100 text-purple-800',
+      on_hold: 'bg-amber-100 text-amber-800',
       parts_pending: 'bg-orange-100 text-orange-800',
       completed: 'bg-green-100 text-green-800',
       cancelled: 'bg-gray-100 text-gray-800',
+      closed: 'bg-slate-100 text-slate-800',
     };
     return colors[status?.toLowerCase()] || 'bg-gray-100 text-gray-800';
   };
@@ -576,25 +613,48 @@ export default function WorkOrdersPage() {
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Attachments (Pictures & Documents)
             </label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4">
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 hover:border-blue-400 transition-colors">
               <input
                 type="file"
                 multiple
                 accept="image/*,.pdf,.doc,.docx,.xls,.xlsx"
                 onChange={handleFileChange}
-                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                disabled={isUploading}
+                className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50"
               />
-              <p className="text-xs text-gray-500 mt-2">
-                Supported: Images (JPG, PNG), PDF, Word, Excel
+              <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                <Upload className="w-3 h-3" />
+                Supported: Images (JPG, PNG), PDF, Word, Excel (Max 10MB per file)
               </p>
             </div>
 
+            {/* Upload Progress */}
+            {isUploading && (
+              <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-center gap-2 text-blue-700">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-sm font-medium">{uploadProgress}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Upload Error */}
+            {uploadError && (
+              <div className="mt-3 p-3 bg-red-50 rounded-lg border border-red-200">
+                <div className="flex items-center gap-2 text-red-700">
+                  <AlertCircle className="w-4 h-4" />
+                  <span className="text-sm">{uploadError}</span>
+                </div>
+              </div>
+            )}
+
             {selectedFiles.length > 0 && (
               <div className="mt-3 space-y-2">
-                <p className="text-sm font-medium text-gray-700">Selected Files:</p>
+                <p className="text-sm font-medium text-gray-700">Selected Files ({selectedFiles.length}):</p>
                 {selectedFiles.map((file, index) => (
-                  <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded">
+                  <div key={index} className="flex items-center justify-between bg-gray-50 p-2 rounded border">
                     <div className="flex items-center space-x-2">
+                      <FileText className="w-4 h-4 text-gray-500" />
                       <span className="text-sm text-gray-700">{file.name}</span>
                       <span className="text-xs text-gray-500">
                         ({(file.size / 1024).toFixed(1)} KB)
@@ -603,9 +663,10 @@ export default function WorkOrdersPage() {
                     <button
                       type="button"
                       onClick={() => removeFile(index)}
-                      className="text-red-500 hover:text-red-700 text-sm font-medium"
+                      disabled={isUploading}
+                      className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50 transition-colors disabled:opacity-50"
                     >
-                      Remove
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
                 ))}

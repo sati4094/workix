@@ -60,12 +60,12 @@ Added to work_orders and activities tables:
 
 ---
 
-## ✅ WEB-ADMIN (Next.js) - COMPLETED
+## ✅ DESKTOP APP (Next.js + Tauri) - COMPLETED
 
 ### Implementation:
 - **Database**: IndexedDB via Dexie.js
-- **File**: `web-admin/src/lib/database.ts` (360 lines - NEW)
-- **Sync Engine**: `web-admin/src/lib/syncEngine.ts` (240 lines - NEW)
+- **File**: `workix-desktop/src/lib/database.ts` (360 lines)
+- **Sync Engine**: `workix-desktop/src/lib/syncEngine.ts` (240 lines)
 - **Package**: `dexie@latest` installed
 
 ### Features:
@@ -256,10 +256,10 @@ npx expo start --clear
 # - Watch sync happen
 ```
 
-### Web-Admin:
+### Desktop App:
 ```bash
 # 1. Start dev server
-cd web-admin
+cd workix-desktop
 npm run dev
 
 # 2. Open DevTools → Application → IndexedDB
@@ -282,8 +282,8 @@ backend/add-sync-columns.js               (67 lines)
 backend/src/routes/sync.routes.js         (350 lines)
 mobile/src/services/database.js           (543 lines)
 mobile/src/services/syncEngine.js         (416 lines)
-web-admin/src/lib/database.ts             (360 lines)
-web-admin/src/lib/syncEngine.ts           (240 lines)
+workix-desktop/src/lib/database.ts        (360 lines)
+workix-desktop/src/lib/syncEngine.ts      (240 lines)
 ```
 
 ### Modified:
@@ -293,7 +293,7 @@ mobile/App.js                             (temporarily disabled SQLite)
 mobile/src/store/workOrderStore.js        (SQLite integration)
 mobile/src/screens/profile/ProfileScreen.js (sync UI)
 mobile/package.json                       (React 18.2.0)
-web-admin/package.json                    (+dexie)
+workix-desktop/package.json               (+dexie)
 ```
 
 ### Total Lines of Code: **~2,000 lines**
@@ -314,7 +314,7 @@ web-admin/package.json                    (+dexie)
    - Test offline CRUD operations
    - Test auto-sync
 
-3. **Web-Admin**:
+3. **Desktop App**:
    - Initialize sync engine in app
    - Add sync status UI component
    - Test IndexedDB in browser
@@ -323,8 +323,8 @@ web-admin/package.json                    (+dexie)
 4. **Integration Testing**:
    - Create work order on mobile while offline
    - Go online, watch it sync to backend
-   - View same work order in web-admin
-   - Update in web-admin, sync back to mobile
+   - View same work order in desktop app
+   - Update in desktop app, sync back to mobile
    - Test conflict scenarios
 
 ---
@@ -351,11 +351,11 @@ web-admin/package.json                    (+dexie)
 - [x] Database migration script created
 - [x] Mobile SQLite implementation complete
 - [x] Mobile sync engine complete
-- [x] Web-admin IndexedDB implementation complete
-- [x] Web-admin sync engine complete
+- [x] Desktop app IndexedDB implementation complete
+- [x] Desktop app sync engine complete
 - [ ] Backend migration executed
 - [ ] Mobile app loads with SQLite
-- [ ] Web-admin sync tested
+- [ ] Desktop app sync tested
 - [ ] End-to-end sync tested
 - [ ] Conflict resolution tested
 

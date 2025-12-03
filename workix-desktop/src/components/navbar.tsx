@@ -57,7 +57,8 @@ export function Navbar() {
           onClick={toggleSidebar}
           className="p-2 hover:bg-gray-100 rounded-lg transition-colors focus:ring-2 focus:ring-purple-500 focus:outline-none"
           aria-label="Toggle sidebar navigation"
-          aria-expanded="true"
+          aria-expanded={useUIStore.getState().sidebarOpen}
+          aria-controls="sidebar-navigation"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />

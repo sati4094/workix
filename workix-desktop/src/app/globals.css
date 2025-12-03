@@ -36,3 +36,103 @@ html {
 ::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(180deg, #9333ea, #db2777);
 }
+
+/* Animation utilities */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out;
+}
+
+/* Print styles */
+@media print {
+  /* Hide navigation elements */
+  nav,
+  aside,
+  .sidebar,
+  .navbar,
+  button,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Reset backgrounds and gradients for printing */
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
+    line-height: 1.5;
+  }
+
+  /* Make main content full width */
+  main,
+  .main-content {
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 20px !important;
+  }
+
+  /* Ensure tables print properly */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  th, td {
+    border: 1px solid #333;
+    padding: 8px;
+    text-align: left;
+  }
+
+  /* Page break controls */
+  h1, h2, h3 {
+    page-break-after: avoid;
+  }
+
+  .page-break {
+    page-break-before: always;
+  }
+
+  /* Remove shadows and unnecessary styling */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Ensure links are visible */
+  a[href]:after {
+    content: " (" attr(href) ")";
+    font-size: 10pt;
+    color: #666;
+  }
+
+  /* Status badges - ensure readable */
+  .bg-green-100, .bg-yellow-100, .bg-red-100, .bg-blue-100, .bg-purple-100, .bg-orange-100 {
+    background-color: #f5f5f5 !important;
+    border: 1px solid #333 !important;
+  }
+}

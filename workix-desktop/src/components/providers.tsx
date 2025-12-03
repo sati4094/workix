@@ -3,6 +3,7 @@
 import { ReactNode } from 'react';
 import { QueryProvider } from '@/lib/query-provider';
 import { Toaster } from 'react-hot-toast';
+import { ErrorBoundary } from './ErrorBoundary';
 
 interface ProvidersProps {
   children: ReactNode;
@@ -10,26 +11,28 @@ interface ProvidersProps {
 
 export function Providers({ children }: ProvidersProps) {
   return (
-    <QueryProvider>
-      {children}
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 4000,
-          success: {
-            style: {
-              background: '#10B981',
-              color: '#fff',
+    <ErrorBoundary>
+      <QueryProvider>
+        {children}
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 4000,
+            success: {
+              style: {
+                background: '#10B981',
+                color: '#fff',
+              },
             },
-          },
-          error: {
-            style: {
-              background: '#EF4444',
-              color: '#fff',
+            error: {
+              style: {
+                background: '#EF4444',
+                color: '#fff',
+              },
             },
-          },
-        }}
-      />
-    </QueryProvider>
+          }}
+        />
+      </QueryProvider>
+    </ErrorBoundary>
   );
 }

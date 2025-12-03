@@ -192,19 +192,20 @@ Keep these terminals open:
 
 **Terminal 1 - Backend:**
 ```powershell
-cd D:\OneDrive\Apps\AIApps\workix\workix\backend
+cd D:\OneDrive\Documents\GitHub\workix\backend
 npm run dev
 ```
 
-**Terminal 2 - Web Admin:**
+**Terminal 2 - Desktop App:**
 ```powershell
-cd D:\OneDrive\Apps\AIApps\workix\workix\web-admin
+cd D:\OneDrive\Documents\GitHub\workix\workix-desktop
 npm run dev
+# Or for native app: npm run tauri dev
 ```
 
 **Terminal 3 - Mobile:**
 ```powershell
-cd D:\OneDrive\Apps\AIApps\workix\workix\mobile
+cd D:\OneDrive\Documents\GitHub\workix\mobile
 npx expo start -c
 # Press 'a' when ready
 ```

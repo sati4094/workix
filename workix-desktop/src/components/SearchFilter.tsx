@@ -32,7 +32,7 @@ export function SearchFilter({
 
   const debouncedSearch = useDebouncedCallback((value: string) => {
     onSearchChange(value);
-  }, 500);
+  }, 300);
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
