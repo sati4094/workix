@@ -56,9 +56,26 @@ const schemas = {
       email: Joi.string().email().required(),
       password: Joi.string().min(8).required(),
       name: Joi.string().min(2).max(255).required(),
-      role: Joi.string().valid('admin', 'technician', 'analyst', 'manager', 'client').required(),
+      role: Joi.string()
+        .valid(
+          'superadmin',
+          'supertech',
+          'admin',
+          'manager',
+          'portfolio_manager',
+          'facility_manager',
+          'engineer',
+          'technician',
+          'analyst',
+          'basic_user',
+          'client'
+        )
+        .required(),
       phone: Joi.string().pattern(/^[0-9+\-() ]+$/).allow('', null),
       team: Joi.string().max(100).allow('', null),
+      enterprise_id: Joi.string().uuid().allow(null, ''),
+      site_id: Joi.string().uuid().allow(null, ''),
+      tag_ids: Joi.array().items(Joi.string().uuid()).optional(),
     }),
   }),
 

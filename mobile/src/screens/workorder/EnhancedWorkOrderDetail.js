@@ -275,8 +275,13 @@ export default function EnhancedWorkOrderDetail({ route, navigation }) {
           />
           <Card.Content>
             <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-              Enterprise: {wo.enterprise_name || wo.client_name}
+              Enterprise: {wo.enterprise_name || wo.client_name || '—'}
             </Text>
+            {wo.enterprise_code && (
+              <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 2 }}>
+                Code: {wo.enterprise_code}
+              </Text>
+            )}
             <Text variant="titleMedium" style={{ marginTop: 8 }}>{wo.site_name}</Text>
             <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant, marginTop: 4 }}>
               {wo.site_address}

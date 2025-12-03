@@ -41,7 +41,7 @@ function WorkOrderCard({ workOrder, onPress, onQuickAction }) {
               {workOrder.title}
             </Text>
             <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-              {workOrder.enterprise_name || workOrder.client_name} • {workOrder.site_name}
+              {(workOrder.enterprise_name || workOrder.client_name || '—')} • {workOrder.site_name}
             </Text>
           </View>
           <Chip

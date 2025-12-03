@@ -2,7 +2,63 @@ import axios from 'axios';
 import NetInfo from '@react-native-community/netinfo';
 import { API_CONFIG } from '../config/api';
 import { useAuthStore } from '../store/authStore';
-import { addToOfflineQueue, isOnline } from './offlineService';
+import { addToOfflineQueue } from './offlineService';
+
+// Helper to align enterprise payloads with backend schema
+const normalizeEnterprisePayload = (payload = {}) => {
+  if (!payload || typeof payload !== 'object') {
+    return payload;
+  }
+
+  const {
+    address,
+    address_line_1,
+    address_line_2,
+    addressLine1,
+    addressLine2,
+    description,
+    notes,
+    status,
+    is_active,
+    isActive,
+    enterprise_code,
+    code,
+    ...rest
+  } = payload;
+
+  const normalized = { ...rest };
+
+  // Prefer explicit address line fields; fall back to legacy "address"
+  const line1 = address_line_1 ?? addressLine1 ?? address ?? null;
+  const line2 = address_line_2 ?? addressLine2 ?? null;
+  if (line1 !== undefined) normalized.address_line_1 = line1;
+  if (line2 !== undefined) normalized.address_line_2 = line2;
+
+  // Use description; fall back to legacy notes field
+  if (description !== undefined) {
+    normalized.description = description;
+  } else if (notes !== undefined) {
+    normalized.description = notes;
+  }
+
+  // Ensure status/is_active stay in sync for backend mapper
+  const resolvedIsActive =
+    is_active ?? isActive ?? (typeof status === 'string' ? status.toLowerCase() === 'active' : undefined);
+  if (resolvedIsActive !== undefined) {
+    normalized.is_active = resolvedIsActive;
+    normalized.status = resolvedIsActive ? 'active' : 'inactive';
+  } else if (status !== undefined) {
+    normalized.status = status;
+  }
+
+  // Preserve/normalize enterprise code
+  const finalCode = (enterprise_code ?? code ?? '').trim();
+  if (finalCode) {
+    normalized.enterprise_code = finalCode;
+  }
+
+  return normalized;
+};
 
 // Create axios instance
 const api = axios.create({
@@ -27,7 +83,7 @@ api.interceptors.request.use(
     if (!netInfo.isConnected) {
       // Queue request for later if it's a mutation
       if (config.method !== 'get') {
-        addToOfflineQueue({
+        await addToOfflineQueue({
           url: config.url,
           method: config.method,
           data: config.data,
@@ -111,8 +167,14 @@ export const apiService = {
   // Enterprises (replaces Clients)
   getEnterprises: (params) => api.get(API_CONFIG.ENDPOINTS.ENTERPRISES, { params }),
   getEnterpriseById: (id) => api.get(`${API_CONFIG.ENDPOINTS.ENTERPRISES}/${id}`),
-  createEnterprise: (data) => api.post(API_CONFIG.ENDPOINTS.ENTERPRISES, data),
-  updateEnterprise: (id, data) => api.patch(`${API_CONFIG.ENDPOINTS.ENTERPRISES}/${id}`, data),
+  createEnterprise: (data) => api.post(
+    API_CONFIG.ENDPOINTS.ENTERPRISES,
+    normalizeEnterprisePayload(data)
+  ),
+  updateEnterprise: (id, data) => api.patch(
+    `${API_CONFIG.ENDPOINTS.ENTERPRISES}/${id}`,
+    normalizeEnterprisePayload(data)
+  ),
   
   // Buildings
   getBuildings: (params) => api.get(API_CONFIG.ENDPOINTS.BUILDINGS, { params }),

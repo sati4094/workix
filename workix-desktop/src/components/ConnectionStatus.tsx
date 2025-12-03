@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { useConnectionStore, useSettingsStore } from '@/store';
 import { Wifi, WifiOff, RefreshCw, AlertTriangle, CheckCircle } from 'lucide-react';
 
 export function ConnectionStatus() {
+  const [isHydrated, setIsHydrated] = useState(false);
   const { 
     isOnline, 
     isBackendReachable, 
@@ -18,6 +19,10 @@ export function ConnectionStatus() {
   } = useConnectionStore();
   
   const { apiUrl } = useSettingsStore();
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
   
   const checkBackendConnection = useCallback(async () => {
     try {
@@ -86,6 +91,11 @@ export function ConnectionStatus() {
     const date = new Date(lastChecked);
     return date.toLocaleTimeString();
   };
+
+  // Avoid SSR mismatch by waiting for hydration
+  if (!isHydrated) {
+    return null;
+  }
 
   // Don't show anything if fully connected
   if (isOnline && isBackendReachable) {
@@ -158,7 +168,16 @@ export function ConnectionStatus() {
 
 // Inline banner version for use in headers/layouts
 export function ConnectionBanner() {
+  const [isHydrated, setIsHydrated] = useState(false);
   const { isOnline, isBackendReachable } = useConnectionStore();
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
+
+  if (!isHydrated) {
+    return null;
+  }
   
   // Don't show anything if fully connected
   if (isOnline && isBackendReachable) {

@@ -1,160 +1,310 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import api from './api';
+import { decryptPayload, encryptPayload } from './offline/crypto';
+import {
+  getAll,
+  getFirst,
+  initializeOfflineDatabase,
+  run,
+} from './offline/database';
 
-const OFFLINE_QUEUE_KEY = 'workix_offline_queue';
-const SYNC_STATUS_KEY = 'workix_sync_status';
+const SYNC_METADATA_KEY = 'sync_status';
+const WORK_ORDER_UPDATED_AT_KEY = 'work_orders_updated_at';
 
-let syncInterval = null;
+let syncInterval;
+let netInfoUnsubscribe;
 let isOnlineStatus = true;
+let isProcessingQueue = false;
 
-// Initialize network listener
-export function initializeOfflineQueue() {
-  // Listen to network changes
-  NetInfo.addEventListener(state => {
-    isOnlineStatus = state.isConnected && state.isInternetReachable;
-    
-    if (isOnlineStatus) {
-      // Process queue when coming online
-      processOfflineQueue();
-    }
-  });
-  
-  // Start periodic sync (every 5 minutes)
+const listeners = new Set();
+let currentTelemetry = {
+  status: 'idle',
+  queueSize: 0,
+  lastSync: null,
+  lastError: null,
+};
+
+const randomId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+function emitTelemetry(patch = {}) {
+  currentTelemetry = { ...currentTelemetry, ...patch };
+  listeners.forEach((listener) => listener(currentTelemetry));
+}
+
+async function setMetadata(key, value) {
+  if (value === null || value === undefined) {
+    await run('DELETE FROM metadata WHERE key = ?', [key]);
+    return;
+  }
+
+  const serialized = JSON.stringify(value);
+  await run('INSERT OR REPLACE INTO metadata (key, value) VALUES (?, ?)', [key, serialized]);
+}
+
+async function getMetadata(key) {
+  const row = await getFirst('SELECT value FROM metadata WHERE key = ?', [key]);
+  if (!row) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(row.value);
+  } catch (error) {
+    return row.value;
+  }
+}
+
+async function hydrateTelemetryFromDisk() {
+  const persisted = await getMetadata(SYNC_METADATA_KEY);
+  if (persisted) {
+    emitTelemetry({
+      lastSync: persisted.lastSync ?? null,
+    });
+  }
+
+  await refreshQueueSize();
+}
+
+async function refreshQueueSize() {
+  const row = await getFirst(
+    "SELECT COUNT(*) as count FROM offline_queue WHERE status != 'completed'",
+  );
+  emitTelemetry({ queueSize: row?.count ?? 0 });
+}
+
+function schedulePeriodicSync() {
+  if (syncInterval) {
+    clearInterval(syncInterval);
+  }
+
   syncInterval = setInterval(() => {
     if (isOnlineStatus) {
       processOfflineQueue();
     }
-  }, 5 * 60 * 1000);
+  }, 2 * 60 * 1000);
 }
 
-// Check if online
+async function handleConnectivityChange(state) {
+  const online = state.isConnected && state.isInternetReachable !== false;
+  isOnlineStatus = !!online;
+  emitTelemetry({ status: online ? 'idle' : 'offline' });
+
+  if (online) {
+    await processOfflineQueue();
+  }
+}
+
+export async function initializeOfflineQueue() {
+  await initializeOfflineDatabase();
+  await hydrateTelemetryFromDisk();
+
+  const initialState = await NetInfo.fetch();
+  await handleConnectivityChange(initialState);
+
+  netInfoUnsubscribe = NetInfo.addEventListener(handleConnectivityChange);
+  schedulePeriodicSync();
+}
+
+export function subscribeToSyncTelemetry(listener) {
+  listeners.add(listener);
+  listener(currentTelemetry);
+  return () => listeners.delete(listener);
+}
+
 export function isOnline() {
   return isOnlineStatus;
 }
 
-// Add request to offline queue
 export async function addToOfflineQueue(request) {
-  try {
-    const queueJson = await AsyncStorage.getItem(OFFLINE_QUEUE_KEY);
-    const queue = queueJson ? JSON.parse(queueJson) : [];
-    
-    queue.push({
-      ...request,
-      id: Date.now().toString(),
-      timestamp: Date.now(),
-      status: 'pending',
-    });
-    
-    await AsyncStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(queue));
-    console.log('Request queued for offline sync:', request.url);
-  } catch (error) {
-    console.error('Failed to add to offline queue:', error);
-  }
+  const requestId = request.request_id ?? randomId();
+  const now = Date.now();
+
+  const payload = await encryptPayload(request.data ?? {});
+
+  const existing = await getFirst('SELECT retries FROM offline_queue WHERE request_id = ?', [requestId]);
+  const retries = existing?.retries ?? 0;
+
+  await run(
+    `INSERT OR REPLACE INTO offline_queue
+      (request_id, method, url, payload, retries, status, error, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, NULL, ?, ?)`,
+    [
+      requestId,
+      (request.method ?? 'post').toUpperCase(),
+      request.url,
+      payload,
+      retries,
+      'pending',
+      request.timestamp ?? now,
+      now,
+    ],
+  );
+
+  await refreshQueueSize();
+
+  emitTelemetry({
+    status: isOnlineStatus ? 'idle' : 'offline',
+  });
 }
 
-// Get offline queue
 export async function getOfflineQueue() {
-  try {
-    const queueJson = await AsyncStorage.getItem(OFFLINE_QUEUE_KEY);
-    return queueJson ? JSON.parse(queueJson) : [];
-  } catch (error) {
-    console.error('Failed to get offline queue:', error);
-    return [];
-  }
+  const rows = await getAll(
+    'SELECT request_id, method, url, payload, retries, status, error, created_at FROM offline_queue ORDER BY created_at ASC',
+  );
+
+  return Promise.all(
+    rows.map(async (row) => ({
+      id: row.request_id,
+      method: row.method,
+      url: row.url,
+      data: await decryptPayload(row.payload),
+      retries: row.retries,
+      status: row.status,
+      error: row.error,
+      createdAt: row.created_at,
+    })),
+  );
 }
 
-// Process offline queue
 export async function processOfflineQueue() {
-  if (!isOnlineStatus) {
-    console.log('Offline - skipping queue processing');
+  if (!isOnlineStatus || isProcessingQueue) {
     return;
   }
 
+  isProcessingQueue = true;
+  emitTelemetry({ status: 'syncing' });
+
   try {
     const queue = await getOfflineQueue();
-    
     if (queue.length === 0) {
+      emitTelemetry({ status: 'idle' });
       return;
     }
 
-    console.log(`Processing ${queue.length} queued requests...`);
-    
-    const results = [];
-    const remainingQueue = [];
+    let successCount = 0;
+    let failedCount = 0;
 
-    for (const request of queue) {
-      if (request.status === 'completed') {
-        continue; // Skip already completed
-      }
-
+    for (const entry of queue) {
       try {
-        // Attempt to send the request
         await api.request({
-          url: request.url,
-          method: request.method,
-          data: request.data,
+          url: entry.url,
+          method: entry.method,
+          data: entry.data,
         });
-        
-        results.push({ id: request.id, status: 'success' });
-        console.log(`✓ Synced: ${request.method.toUpperCase()} ${request.url}`);
+
+        await run('DELETE FROM offline_queue WHERE request_id = ?', [entry.id]);
+        successCount += 1;
       } catch (error) {
-        console.error(`✗ Failed to sync: ${request.method.toUpperCase()} ${request.url}`, error.message);
-        
-        // Check if it's a permanent error (4xx) or temporary (5xx, network)
-        if (error.response && error.response.status >= 400 && error.response.status < 500) {
-          // Permanent error - remove from queue
-          results.push({ id: request.id, status: 'failed', error: error.message });
-        } else {
-          // Temporary error - keep in queue
-          remainingQueue.push(request);
-        }
+        failedCount += 1;
+
+        const status = error.response && error.response.status >= 400 && error.response.status < 500
+          ? 'failed'
+          : 'pending';
+
+        await run(
+          'UPDATE offline_queue SET retries = retries + 1, status = ?, error = ?, updated_at = ? WHERE request_id = ?',
+          [
+            status,
+            error.message ?? 'Sync failed',
+            Date.now(),
+            entry.id,
+          ],
+        );
       }
     }
 
-    // Update queue with remaining items
-    await AsyncStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(remainingQueue));
-    
-    // Update sync status
-    await AsyncStorage.setItem(SYNC_STATUS_KEY, JSON.stringify({
-      lastSync: Date.now(),
-      synced: results.filter(r => r.status === 'success').length,
-      failed: results.filter(r => r.status === 'failed').length,
-      remaining: remainingQueue.length,
-    }));
+    await refreshQueueSize();
 
-    console.log(`Sync complete: ${results.filter(r => r.status === 'success').length} synced, ${remainingQueue.length} remaining`);
+    const queueRow = await getFirst('SELECT COUNT(*) as count FROM offline_queue WHERE status = ?', ['pending']);
+    const queueRemaining = queueRow?.count ?? 0;
+    const lastSync = Date.now();
+
+    await setMetadata(SYNC_METADATA_KEY, {
+      lastSync,
+      synced: successCount,
+      failed: failedCount,
+      remaining: queueRemaining,
+    });
+
+    emitTelemetry({
+      status: queueRemaining > 0 ? 'idle' : 'idle',
+      lastSync,
+      lastError: failedCount > 0 ? 'Review sync queue' : null,
+    });
   } catch (error) {
-    console.error('Failed to process offline queue:', error);
+    emitTelemetry({ status: 'error', lastError: error.message });
+  } finally {
+    isProcessingQueue = false;
   }
 }
 
-// Get sync status
 export async function getSyncStatus() {
-  try {
-    const statusJson = await AsyncStorage.getItem(SYNC_STATUS_KEY);
-    return statusJson ? JSON.parse(statusJson) : null;
-  } catch (error) {
-    console.error('Failed to get sync status:', error);
-    return null;
-  }
+  const metadata = await getMetadata(SYNC_METADATA_KEY);
+  const queueRow = await getFirst('SELECT COUNT(*) as count FROM offline_queue WHERE status != ?', ['completed']);
+  return {
+    ...(metadata ?? {}),
+    status: currentTelemetry.status,
+    queueSize: queueRow?.count ?? 0,
+  };
 }
 
-// Clear offline queue
+export async function cacheWorkOrders(workOrders = []) {
+  const now = Date.now();
+
+  await Promise.all(
+    workOrders.map(async (workOrder) => {
+      if (!workOrder) {
+        return;
+      }
+
+      const identifier = workOrder.id ?? workOrder.work_order_number;
+      if (!identifier) {
+        return;
+      }
+
+      const payload = await encryptPayload(workOrder);
+      await run(
+        'INSERT OR REPLACE INTO work_order_cache (id, payload, updated_at) VALUES (?, ?, ?)',
+        [String(identifier), payload, now],
+      );
+    }),
+  );
+
+  await setMetadata(WORK_ORDER_UPDATED_AT_KEY, { updatedAt: now });
+}
+
+export async function getCachedWorkOrders() {
+  const rows = await getAll('SELECT id, payload, updated_at FROM work_order_cache');
+  const workOrders = await Promise.all(
+    rows.map(async (row) => {
+      const decoded = await decryptPayload(row.payload);
+      return typeof decoded === 'object' ? decoded : { id: row.id, raw: decoded };
+    }),
+  );
+
+  return {
+    workOrders,
+    metadata: await getMetadata(WORK_ORDER_UPDATED_AT_KEY),
+  };
+}
+
 export async function clearOfflineQueue() {
-  try {
-    await AsyncStorage.removeItem(OFFLINE_QUEUE_KEY);
-    await AsyncStorage.removeItem(SYNC_STATUS_KEY);
-  } catch (error) {
-    console.error('Failed to clear offline queue:', error);
-  }
+  await run('DELETE FROM offline_queue');
+  await setMetadata(SYNC_METADATA_KEY, null);
+  await refreshQueueSize();
 }
 
-// Cleanup on app close
 export function cleanupOfflineService() {
   if (syncInterval) {
     clearInterval(syncInterval);
     syncInterval = null;
   }
+
+  if (netInfoUnsubscribe) {
+    netInfoUnsubscribe();
+    netInfoUnsubscribe = undefined;
+  }
+
+  listeners.clear();
 }
 

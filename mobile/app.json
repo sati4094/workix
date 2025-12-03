@@ -41,8 +41,8 @@
         {
           "photosPermission": "Allow Workix to access your photos to upload work order documentation."
         }
-      ]
+      ],
+      "expo-sqlite"
     ]
   }
 }
-

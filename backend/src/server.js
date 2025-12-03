@@ -40,6 +40,7 @@ const permissionsRoutes = require('./routes/permissions.routes');
 const assetCategoriesRoutes = require('./routes/asset-categories.routes');
 const assetTypesRoutes = require('./routes/asset-types.routes');
 const syncRoutes = require('./routes/sync.routes');
+const tagRoutes = require('./routes/tag.routes');
 
 const path = require('path');
 
@@ -155,6 +156,7 @@ app.use(`/api/${API_VERSION}/permissions`, permissionsRoutes);
 app.use(`/api/${API_VERSION}/asset-categories`, assetCategoriesRoutes);
 app.use(`/api/${API_VERSION}/asset-types`, assetTypesRoutes);
 app.use(`/api/${API_VERSION}/sync`, syncRoutes);
+app.use(`/api/${API_VERSION}/tags`, tagRoutes);
 
 // 404 handler
 app.use((req, res) => {

@@ -13,11 +13,17 @@ CREATE EXTENSION IF NOT EXISTS timescaledb;
 -- ENUM TYPES
 -- ============================================
 
--- User roles
+-- User roles (supports Workix platform and enterprise scopes)
 CREATE TYPE user_role AS ENUM (
+  'superadmin',
+  'supertech',
   'admin',
-  'manager',
+  'portfolio_manager',
+  'facility_manager',
+  'engineer',
   'technician',
+  'basic_user',
+  'manager',
   'analyst',
   'client'
 );
@@ -186,6 +192,72 @@ CREATE TABLE sites (
   updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
   created_by UUID REFERENCES users(id)
 );
+
+-- Associate users with enterprises and sites for scoped access
+ALTER TABLE users
+  ADD COLUMN IF NOT EXISTS enterprise_id UUID,
+  ADD COLUMN IF NOT EXISTS site_id UUID;
+
+ALTER TABLE users
+  DROP CONSTRAINT IF EXISTS fk_users_enterprise_id,
+  ADD CONSTRAINT fk_users_enterprise_id
+    FOREIGN KEY (enterprise_id)
+    REFERENCES enterprises(id)
+    ON DELETE SET NULL;
+
+ALTER TABLE users
+  DROP CONSTRAINT IF EXISTS fk_users_site_id,
+  ADD CONSTRAINT fk_users_site_id
+    FOREIGN KEY (site_id)
+    REFERENCES sites(id)
+    ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS idx_users_enterprise_id ON users(enterprise_id);
+CREATE INDEX IF NOT EXISTS idx_users_site_id ON users(site_id);
+
+-- ============================================
+-- TAGGING TABLES
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS tags (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  label VARCHAR(64) NOT NULL,
+  color VARCHAR(20),
+  description TEXT,
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS tags_label_unique_idx ON tags(LOWER(label));
+
+CREATE TABLE IF NOT EXISTS enterprise_tags (
+  enterprise_id UUID NOT NULL REFERENCES enterprises(id) ON DELETE CASCADE,
+  tag_id UUID NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+  assigned_by UUID REFERENCES users(id),
+  assigned_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (enterprise_id, tag_id)
+);
+
+CREATE TABLE IF NOT EXISTS site_tags (
+  site_id UUID NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+  tag_id UUID NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+  assigned_by UUID REFERENCES users(id),
+  assigned_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (site_id, tag_id)
+);
+
+CREATE TABLE IF NOT EXISTS user_tags (
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  tag_id UUID NOT NULL REFERENCES tags(id) ON DELETE CASCADE,
+  assigned_by UUID REFERENCES users(id),
+  assigned_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, tag_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_enterprise_tags_tag_id ON enterprise_tags(tag_id);
+CREATE INDEX IF NOT EXISTS idx_site_tags_tag_id ON site_tags(tag_id);
+CREATE INDEX IF NOT EXISTS idx_user_tags_tag_id ON user_tags(tag_id);
 
 -- Buildings
 CREATE TABLE buildings (
@@ -661,6 +733,71 @@ CREATE TABLE clients (
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
+
+-- ============================================
+-- VIEWS
+-- ============================================
+
+CREATE OR REPLACE VIEW technician_workload AS
+SELECT
+  u.id AS technician_id,
+  u.name AS technician_name,
+  COUNT(
+    CASE WHEN wo.status IN ('acknowledged', 'in_progress') THEN 1 ELSE NULL END
+  ) AS active_work_orders,
+  COUNT(
+    CASE WHEN wo.status = 'pending' THEN 1 ELSE NULL END
+  ) AS pending_work_orders,
+  COUNT(
+    CASE
+      WHEN wo.status = 'completed' AND wo.completed_at >= (CURRENT_DATE - INTERVAL '30 days')
+      THEN 1 ELSE NULL END
+  ) AS completed_last_30_days,
+  COUNT(
+    CASE
+      WHEN ps.status = 'scheduled' AND ps.scheduled_date <= (CURRENT_DATE + INTERVAL '7 days')
+      THEN 1 ELSE NULL END
+  ) AS upcoming_ppm_count
+FROM users u
+LEFT JOIN work_orders wo ON u.id = wo.assigned_to
+LEFT JOIN ppm_schedules ps ON u.id = ps.assigned_technician_id
+WHERE u.role = 'technician'
+  AND u.status = 'active'
+GROUP BY u.id, u.name;
+
+CREATE OR REPLACE VIEW work_order_summary AS
+SELECT
+  wo.id,
+  wo.work_order_number,
+  wo.title,
+  wo.status,
+  wo.priority,
+  wo.source,
+  wo.created_at,
+  wo.due_date,
+  s.name AS site_name,
+  s.address AS site_address,
+  p.name AS project_name,
+  c.name AS client_name,
+  assigned_user.name AS assigned_technician_name,
+  assigned_user.phone AS assigned_technician_phone,
+  reported_user.name AS reported_by_name,
+  (
+    SELECT COUNT(*)
+    FROM work_order_activities
+    WHERE work_order_activities.work_order_id = wo.id
+  ) AS activity_count,
+  (
+    SELECT COUNT(*)
+    FROM work_order_assets
+    WHERE work_order_assets.work_order_id = wo.id
+  ) AS asset_count
+FROM work_orders wo
+JOIN sites s ON wo.site_id = s.id
+JOIN projects p ON s.project_id = p.id
+JOIN clients c ON p.client_id = c.id
+LEFT JOIN users assigned_user ON wo.assigned_to = assigned_user.id
+LEFT JOIN users reported_user ON wo.reported_by = reported_user.id;
 
 -- ============================================
 -- INDEXES

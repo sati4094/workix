@@ -226,7 +226,7 @@ VALUES (
     (SELECT id FROM system_roles WHERE slug = 'superadmin'),
     'active',
     true,
-    'admin'
+    'superadmin'
 ) ON CONFLICT (email) DO UPDATE SET
     system_role_id = EXCLUDED.system_role_id,
     organization_id = EXCLUDED.organization_id,
@@ -243,7 +243,7 @@ VALUES (
     (SELECT id FROM system_roles WHERE slug = 'supertech'),
     'active',
     true,
-    'technician'
+    'supertech'
 ) ON CONFLICT (email) DO UPDATE SET
     system_role_id = EXCLUDED.system_role_id,
     organization_id = EXCLUDED.organization_id;

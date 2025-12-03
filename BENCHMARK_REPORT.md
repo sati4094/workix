@@ -1,10 +1,10 @@
 # 🏆 Workix Benchmark Report
 ## Workix vs. FSI & IBM Maximo
 
-**Date:** November 22, 2025  
+**Date:** December 3, 2025  
 **Project:** Workix EPC Service Management Platform  
 **Analysis:** Feature parity, architecture, and enterprise readiness comparison
-**Latest Update:** Enterprise Location Hierarchy & Work Order Integration Complete
+**Latest Update:** Enterprise CRUD Schema Alignment & API Hardening
 
 ---
 
@@ -28,26 +28,20 @@ Workix is a **lightweight, modern, purpose-built** solution for Energy Performan
 
 ---
 
-## 🆕 Recent Updates (November 22, 2025)
+## 🆕 Recent Updates (December 3, 2025)
 
-### Enterprise Location Hierarchy Implementation
-- ✅ **Database Schema:** 63 tables with full enterprise structure
-- ✅ **Location Management:** Buildings, Floors, Spaces with foreign key relationships
-- ✅ **Parts & Inventory:** 8 sample parts, 3 storerooms, low-stock tracking
-- ✅ **Team Management:** HVAC, Electrical, Plumbing teams with member assignment
-- ✅ **Work Order Integration:** Location fields (building_id, floor_id, space_id) fully integrated
-- ✅ **Frontend Components:** LocationSelector with cascading dropdowns (Site → Building → Floor → Space)
-- ✅ **10 New API Endpoints:** buildings, floors, spaces, parts, storerooms, vendors, teams, roles, asset-categories, asset-types
-- ✅ **90+ React Query Hooks:** Complete frontend integration with automatic caching and invalidation
-- ✅ **Validation Middleware:** Added location fields to work order creation schema
-- ✅ **Bug Fixes:** Resolved project_id column issue, activities array handling
+### Enterprise CRUD Stabilization
+- ✅ **Schema Alignment:** POST/PATCH handlers now map address_line_1/2, description, and status → is_active exactly as defined in the V2 database.
+- ✅ **Code Generation:** Auto-generates enterprise codes (`ENT-XXXXXX`) when clients omit them, matching frontend expectations.
+- ✅ **Legacy Cleanup:** Removed obsolete `organization_id`/`updated_by` references that were triggering 500 errors during QA regression runs.
+- ✅ **Soft Delete Integrity:** Deletion flow updated to rely solely on `deleted_at`, reflecting the latest schema snapshot.
+- ⚙️ **Integration Testing:** PowerShell harness extended to cover enterprise create/update sequences; rerun scheduled post-deployment restart.
+- ⚠️ **Next:** Add regression tests to lock the CRUD contract and extend analytics dashboard coverage.
 
-### Technical Achievement
-```
-Before (Nov 17):  28 Tables | Basic Work Orders
-After (Nov 22):   63 Tables | Enterprise-Ready with Location Hierarchy
-                  +35 Tables | +10 API Routes | +900 Lines Frontend Code
-```
+### Earlier Milestone – November 22, 2025
+- 63-table schema with full location hierarchy deployed (Site → Building → Floor → Space).
+- Added storerooms, inventory, vendor, and team domains with API + frontend wiring.
+- Rolled out cascading selectors, validation middleware, and 90+ React Query hooks to unify the UX.
 
 ---
 

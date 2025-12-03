@@ -7,162 +7,178 @@ async function seedDatabase() {
   try {
     console.log('Starting database seeding...');
 
-    // Hash password for demo users
-    const passwordHash = await bcrypt.hash('Admin@123', 10);
+    const adminPassword = await bcrypt.hash('Admin@123', 10);
+    const opsPassword = await bcrypt.hash('Ops@123', 10);
 
-    // 1. Create admin user
+    // Seed base tags
+    const tagLabels = [
+      { label: 'HVAC', color: '#6366F1' },
+      { label: 'Critical', color: '#EF4444' },
+      { label: 'Premium Client', color: '#F59E0B' },
+      { label: 'Government', color: '#10B981' },
+    ];
+
+    for (const tag of tagLabels) {
+      await query(
+        `INSERT INTO tags (label, color, created_by)
+         VALUES ($1, $2, NULL)
+         ON CONFLICT (LOWER(label)) DO NOTHING`,
+        [tag.label, tag.color]
+      );
+    }
+
+    const { rows: tagRows } = await query('SELECT id, label FROM tags');
+    const tagMap = Object.fromEntries(tagRows.map((row) => [row.label, row.id]));
+
+    // Superadmin user
     await query(
       `INSERT INTO users (email, password_hash, name, role, status, phone)
-       VALUES ($1, $2, $3, $4, $5, $6)
-       ON CONFLICT (email) DO NOTHING
-       RETURNING id`,
-      ['admin@workix.com', passwordHash, 'System Administrator', 'admin', 'active', '+1-555-0100']
+       VALUES ($1, $2, $3, 'superadmin', 'active', $4)
+       ON CONFLICT (email) DO NOTHING`,
+      ['admin@workix.com', adminPassword, 'System SuperAdmin', '+971-555-0100']
     );
-    console.log('✅ Admin user created');
+    console.log('✅ Superadmin seeded');
 
-    // 2. Create sample technicians
-    const techPasswordHash = await bcrypt.hash('Tech@123', 10);
-    
-    const tech1 = await query(
-      `INSERT INTO users (email, password_hash, name, role, status, phone, team)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       ON CONFLICT (email) DO NOTHING
+    // Enterprise seed
+    const enterpriseResult = await query(
+      `INSERT INTO enterprises (name, enterprise_code, industry, country, description, is_active)
+       VALUES ($1, $2, $3, $4, $5, true)
+       ON CONFLICT (enterprise_code) DO UPDATE SET name = EXCLUDED.name
        RETURNING id`,
-      ['john.tech@workix.com', techPasswordHash, 'John Technician', 'technician', 'active', '+1-555-0101', 'Field Team A']
+      ['Aurora District Cooling', 'ADC-001', 'District Cooling', 'UAE', 'Flagship district cooling client', true]
     );
+    const enterpriseId = enterpriseResult.rows[0].id;
 
-    const tech2 = await query(
-      `INSERT INTO users (email, password_hash, name, role, status, phone, team)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       ON CONFLICT (email) DO NOTHING
-       RETURNING id`,
-      ['sarah.tech@workix.com', techPasswordHash, 'Sarah Technician', 'technician', 'active', '+1-555-0102', 'Field Team B']
-    );
-    console.log('✅ Technicians created');
-
-    // 3. Create analyst user
-    const analystResult = await query(
-      `INSERT INTO users (email, password_hash, name, role, status, phone, team)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
-       ON CONFLICT (email) DO NOTHING
-       RETURNING id`,
-      ['analyst@workix.com', techPasswordHash, 'Energy Analyst', 'analyst', 'active', '+1-555-0103', 'Performance Analysis']
-    );
-    console.log('✅ Analyst created');
-
-    // 4. Create sample client
-    const clientResult = await query(
-      `INSERT INTO clients (name, contact_person, contact_email, contact_phone, address, city, state, postal_code)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       ON CONFLICT DO NOTHING
-       RETURNING id`,
-      ['Green Energy Corp', 'Michael Johnson', 'michael.j@greenenergy.com', '+1-555-2000', '123 Business Ave', 'New York', 'NY', '10001']
+    await query(
+      `INSERT INTO enterprise_tags (enterprise_id, tag_id)
+       VALUES ($1, $2)
+       ON CONFLICT DO NOTHING`,
+      [enterpriseId, tagMap['Premium Client']]
     );
 
-    if (clientResult.rows.length > 0) {
-      const clientId = clientResult.rows[0].id;
-      console.log('✅ Sample client created');
+    // Project + Site
+    const projectResult = await query(
+      `INSERT INTO projects (enterprise_id, name, project_code, status)
+       VALUES ($1, $2, $3, 'active')
+       ON CONFLICT (project_code) DO UPDATE SET name = EXCLUDED.name
+       RETURNING id`,
+      [enterpriseId, 'Downtown Cooling Optimization', 'PRJ-ADC-2025']
+    );
+    const projectId = projectResult.rows[0].id;
 
-      // 5. Create sample project
-      const projectResult = await query(
-        `INSERT INTO projects (name, client_id, contract_number, contract_start_date, contract_end_date, contract_value, description, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         RETURNING id`,
-        ['Main Campus Energy Optimization', clientId, 'EPC-2024-001', '2024-01-01', '2026-12-31', 500000, 'Comprehensive energy performance contracting for main campus facilities', 'active']
+    const siteResult = await query(
+      `INSERT INTO sites (project_id, enterprise_id, name, site_code, address, city, country, latitude, longitude, contact_person, contact_phone)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       ON CONFLICT (site_code) DO UPDATE SET name = EXCLUDED.name
+       RETURNING id`,
+      [
+        projectId,
+        enterpriseId,
+        'District Cooling Plant A',
+        'ADC-SITE-01',
+        'Sheikh Mohammed Bin Rashid Blvd',
+        'Dubai',
+        'UAE',
+        25.1972,
+        55.2744,
+        'Plant Manager',
+        '+971-555-1001',
+      ]
+    );
+    const siteId = siteResult.rows[0].id;
+
+    await query(
+      `INSERT INTO site_tags (site_id, tag_id)
+       VALUES ($1, $2)
+       ON CONFLICT DO NOTHING`,
+      [siteId, tagMap.HVAC]
+    );
+
+    // Seed users tied to enterprise
+    const engineerResult = await query(
+      `INSERT INTO users (email, password_hash, name, role, status, enterprise_id, phone)
+       VALUES ($1, $2, $3, 'engineer', 'active', $4, $5)
+       ON CONFLICT (email) DO UPDATE SET enterprise_id = EXCLUDED.enterprise_id
+       RETURNING id`,
+      ['engineer@aurora.com', opsPassword, 'Lead Engineer', enterpriseId, '+971-555-2002']
+    );
+    const engineerId = engineerResult.rows[0].id;
+
+    const techResult = await query(
+      `INSERT INTO users (email, password_hash, name, role, status, enterprise_id, site_id, phone, team)
+       VALUES ($1, $2, $3, 'technician', 'active', $4, $5, $6, $7)
+       ON CONFLICT (email) DO UPDATE SET site_id = EXCLUDED.site_id
+       RETURNING id`,
+      ['tech@aurora.com', opsPassword, 'Onsite Technician', enterpriseId, siteId, '+971-555-3003', 'Cooling Ops']
+    );
+    const technicianId = techResult.rows[0].id;
+
+    await query(
+      `INSERT INTO user_tags (user_id, tag_id)
+       VALUES ($1, $2)
+       ON CONFLICT (user_id, tag_id) DO NOTHING`,
+      [technicianId, tagMap.Critical]
+    );
+
+    // Seed asset and work order
+    const assetResult = await query(
+      `INSERT INTO assets (site_id, asset_tag, name, type, manufacturer, model, commissioning_date, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'operational')
+       ON CONFLICT (asset_tag) DO UPDATE SET site_id = EXCLUDED.site_id
+       RETURNING id`,
+      [
+        siteId,
+        'CHLR-ADC-001',
+        'Primary Chiller Train 1',
+        'chiller',
+        'Johnson Controls',
+        'YMC2-1030',
+        '2023-09-01',
+      ]
+    );
+    const assetId = assetResult.rows[0].id;
+
+    const workOrderResult = await query(
+      `INSERT INTO work_orders (
+        work_order_number,
+        title,
+        description,
+        source,
+        priority,
+        status,
+        site_id,
+        enterprise_id,
+        reported_by,
+        assigned_to,
+        due_date
+      ) VALUES ($1, $2, $3, 'performance_deviation', 'high', 'pending', $4, $5, $6, $7, NOW() + INTERVAL '3 days')
+      ON CONFLICT (work_order_number) DO NOTHING
+      RETURNING id`,
+      [
+        'WO-ADC-0001',
+        'Chiller COP below threshold',
+        'Automated analytics detected drop in COP for primary chiller. Requires diagnostics and potential tube cleaning.',
+        siteId,
+        enterpriseId,
+        engineerId,
+        technicianId,
+      ]
+    );
+
+    if (workOrderResult.rows.length > 0) {
+      await query(
+        `INSERT INTO work_order_assets (work_order_id, asset_id)
+         VALUES ($1, $2)
+         ON CONFLICT (work_order_id, asset_id) DO NOTHING`,
+        [workOrderResult.rows[0].id, assetId]
       );
-
-      const projectId = projectResult.rows[0].id;
-      console.log('✅ Sample project created');
-
-      // 6. Create sample site
-      const siteResult = await query(
-        `INSERT INTO sites (project_id, name, address, city, state, postal_code, contact_person, contact_phone, latitude, longitude)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-         RETURNING id`,
-        [projectId, 'Building A - Main Office', '456 Green Street', 'New York', 'NY', '10002', 'Building Manager', '+1-555-3000', 40.7128, -74.0060]
-      );
-
-      const siteId = siteResult.rows[0].id;
-      console.log('✅ Sample site created');
-
-      // 7. Create sample assets
-      const asset1 = await query(
-        `INSERT INTO assets (site_id, asset_tag, name, type, manufacturer, model, capacity, capacity_unit, commissioning_date, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-         RETURNING id`,
-        [siteId, 'CH-001', 'Main Chiller Unit 1', 'chiller', 'Carrier', '30XA-502', '500', 'Tons', '2020-06-15', 'operational']
-      );
-
-      const asset2 = await query(
-        `INSERT INTO assets (site_id, asset_tag, name, type, manufacturer, model, capacity, capacity_unit, commissioning_date, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-         RETURNING id`,
-        [siteId, 'AHU-001', 'Air Handling Unit - Floor 1', 'ahu', 'Trane', 'CGAM-140', '14000', 'CFM', '2020-06-15', 'operational']
-      );
-
-      console.log('✅ Sample assets created');
-
-      // 8. Create sample PPM plan
-      const ppmPlanResult = await query(
-        `INSERT INTO ppm_plans (name, description, asset_type, frequency, tasks_checklist, estimated_duration_minutes, instructions, is_active)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-         RETURNING id`,
-        [
-          'Monthly Chiller Maintenance',
-          'Routine monthly preventive maintenance for chiller units',
-          'chiller',
-          'monthly',
-          JSON.stringify([
-            { task: 'Check refrigerant levels', required: true },
-            { task: 'Inspect condenser coils', required: true },
-            { task: 'Test safety controls', required: true },
-            { task: 'Check oil levels', required: true },
-            { task: 'Clean filters', required: true },
-            { task: 'Record operating temperatures and pressures', required: true }
-          ]),
-          120,
-          'Perform all checks while unit is running. Record all readings in the maintenance log.',
-          true
-        ]
-      );
-
-      console.log('✅ Sample PPM plan created');
-
-      // 9. Create sample work order
-      if (tech1.rows.length > 0 && analystResult.rows.length > 0) {
-        const workOrderResult = await query(
-          `INSERT INTO work_orders (title, description, source, priority, site_id, reported_by, assigned_to, status)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-           RETURNING id`,
-          [
-            'Chiller Performance Deviation - High kW/Ton',
-            'Chiller Unit 1 showing 15% higher energy consumption than baseline. Suspected efficiency loss.',
-            'performance_deviation',
-            'high',
-            siteId,
-            analystResult.rows[0].id,
-            tech1.rows[0].id,
-            'pending'
-          ]
-        );
-
-        const workOrderId = workOrderResult.rows[0].id;
-
-        // Link asset to work order
-        await query(
-          `INSERT INTO work_order_assets (work_order_id, asset_id) VALUES ($1, $2)`,
-          [workOrderId, asset1.rows[0].id]
-        );
-
-        console.log('✅ Sample work order created');
-      }
     }
 
     console.log('\n🎉 Database seeding completed successfully!');
     console.log('\n📝 Demo Credentials:');
-    console.log('   Admin: admin@workix.com / Admin@123');
-    console.log('   Technician: john.tech@workix.com / Tech@123');
-    console.log('   Analyst: analyst@workix.com / Tech@123');
+    console.log('   SuperAdmin: admin@workix.com / Admin@123');
+    console.log('   Engineer: engineer@aurora.com / Ops@123');
+    console.log('   Technician: tech@aurora.com / Ops@123');
 
   } catch (error) {
     console.error('❌ Seeding failed:', error.message);
@@ -172,6 +188,5 @@ async function seedDatabase() {
   }
 }
 
-// Run seeding
 seedDatabase();
 

@@ -4,6 +4,7 @@ const { query } = require('../database/connection');
 const { AppError, asyncHandler } = require('../middlewares/errorHandler');
 const { cache } = require('../config/redis');
 const logger = require('../utils/logger');
+const { replaceTagsForEntity } = require('../utils/tagAssignments');
 
 // Generate JWT token
 const generateToken = (userId) => {
@@ -12,9 +13,21 @@ const generateToken = (userId) => {
   });
 };
 
+const fetchUserTags = async (userId) => {
+  const { rows } = await query(
+    `SELECT t.id, t.label, t.color
+     FROM user_tags ut
+     JOIN tags t ON t.id = ut.tag_id
+     WHERE ut.user_id = $1
+     ORDER BY t.label ASC`,
+    [userId]
+  );
+  return rows;
+};
+
 // Register new user
 exports.register = asyncHandler(async (req, res) => {
-  const { email, password, name, role, phone, team } = req.body;
+  const { email, password, name, role, phone, team, enterprise_id, site_id, tag_ids } = req.body;
 
   // Check if user already exists
   const existingUser = await query('SELECT id FROM users WHERE email = $1', [email]);
@@ -28,13 +41,24 @@ exports.register = asyncHandler(async (req, res) => {
 
   // Insert user
   const result = await query(
-    `INSERT INTO users (email, password_hash, name, role, phone, team) 
-     VALUES ($1, $2, $3, $4, $5, $6) 
-     RETURNING id, email, name, role, status, phone, team, created_at`,
-    [email, passwordHash, name, role, phone || null, team || null]
+    `INSERT INTO users (email, password_hash, name, role, phone, team, enterprise_id, site_id) 
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8) 
+     RETURNING id, email, name, role, status, phone, team, enterprise_id, site_id, created_at`,
+    [email, passwordHash, name, role, phone || null, team || null, enterprise_id || null, site_id || null]
   );
 
   const user = result.rows[0];
+
+  if (tag_ids !== undefined) {
+    await replaceTagsForEntity({
+      entity: 'user',
+      entityId: user.id,
+      tagIds: tag_ids,
+      userId: req.user?.id,
+    });
+  }
+
+  const tags = await fetchUserTags(user.id);
 
   // Generate token
   const token = generateToken(user.id);
@@ -48,7 +72,7 @@ exports.register = asyncHandler(async (req, res) => {
     success: true,
     message: 'User registered successfully',
     data: {
-      user,
+      user: { ...user, tags },
       token,
     },
   });
@@ -60,7 +84,7 @@ exports.login = asyncHandler(async (req, res) => {
 
   // Get user from database
   const result = await query(
-    'SELECT id, email, password_hash, name, role, status, phone, team FROM users WHERE email = $1',
+    'SELECT id, email, password_hash, name, role, status, phone, team, enterprise_id, site_id FROM users WHERE email = $1',
     [email]
   );
 
@@ -85,6 +109,8 @@ exports.login = asyncHandler(async (req, res) => {
   // Remove password hash from user object
   delete user.password_hash;
 
+  const tags = await fetchUserTags(user.id);
+
   // Update last login
   await query('UPDATE users SET last_login_at = CURRENT_TIMESTAMP WHERE id = $1', [user.id]);
 
@@ -100,7 +126,7 @@ exports.login = asyncHandler(async (req, res) => {
     success: true,
     message: 'Login successful',
     data: {
-      user,
+      user: { ...user, tags },
       token,
     },
   });
@@ -116,7 +142,7 @@ exports.getMe = asyncHandler(async (req, res) => {
 
   if (!user) {
     const result = await query(
-      'SELECT id, email, name, role, status, phone, team, profile_picture_url, created_at, last_login_at FROM users WHERE id = $1',
+      'SELECT id, email, name, role, status, phone, team, profile_picture_url, created_at, last_login_at, enterprise_id, site_id FROM users WHERE id = $1',
       [userId]
     );
 
@@ -128,9 +154,11 @@ exports.getMe = asyncHandler(async (req, res) => {
     await cache.set(`user:${userId}`, user, 3600);
   }
 
+  const tags = await fetchUserTags(userId);
+
   res.status(200).json({
     success: true,
-    data: { user },
+    data: { user: { ...user, tags } },
   });
 });
 

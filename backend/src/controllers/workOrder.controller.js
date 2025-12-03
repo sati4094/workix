@@ -2,6 +2,7 @@ const { query, transaction } = require('../database/connection');
 const { AppError, asyncHandler } = require('../middlewares/errorHandler');
 const { cache } = require('../config/redis');
 const logger = require('../utils/logger');
+const { applyWorkOrderScope, assertWorkOrderAccess } = require('../utils/accessScope');
 
 // Get all work orders with filters and pagination
 exports.getAllWorkOrders = asyncHandler(async (req, res) => {
@@ -44,15 +45,8 @@ exports.getAllWorkOrders = asyncHandler(async (req, res) => {
     values.push(source);
   }
 
-  // Role-based filtering
-  if (req.user.role === 'technician') {
-    conditions.push(`wo.assigned_to = $${paramCount++}`);
-    values.push(req.user.id);
-  } else if (req.user.role === 'client') {
-    // Enterprises can only see their own work orders
-    conditions.push(`wo.enterprise_id IN (SELECT id FROM enterprises WHERE contact_email = $${paramCount++})`);
-    values.push(req.user.email);
-  }
+  applyWorkOrderScope({ user: req.user, conditions, values, alias: 'wo' });
+  paramCount = values.length + 1;
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
@@ -186,9 +180,7 @@ exports.getWorkOrderById = asyncHandler(async (req, res) => {
   const workOrder = result.rows[0];
 
   // Check permissions
-  if (req.user.role === 'technician' && workOrder.assigned_to !== req.user.id) {
-    throw new AppError('You do not have permission to view this work order', 403);
-  }
+  assertWorkOrderAccess(req.user, workOrder);
 
   res.status(200).json({
     success: true,
@@ -224,10 +216,11 @@ exports.createWorkOrder = asyncHandler(async (req, res) => {
   }
 
   // Verify site exists
-  const siteResult = await query('SELECT id, project_id FROM sites WHERE id = $1', [site_id]);
+  const siteResult = await query('SELECT id, project_id, enterprise_id FROM sites WHERE id = $1', [site_id]);
   if (siteResult.rows.length === 0) {
     throw new AppError('Site not found', 404);
   }
+  const site = siteResult.rows[0];
 
   // Verify assigned technician if provided
   if (assigned_to) {
@@ -277,6 +270,14 @@ exports.createWorkOrder = asyncHandler(async (req, res) => {
 
     const workOrder = woResult.rows[0];
 
+    if (site.enterprise_id && workOrder.enterprise_id !== site.enterprise_id) {
+      await client.query(
+        'UPDATE work_orders SET enterprise_id = $1 WHERE id = $2',
+        [site.enterprise_id, workOrder.id]
+      );
+      workOrder.enterprise_id = site.enterprise_id;
+    }
+
     // Link assets to work order
     if (asset_ids && asset_ids.length > 0) {
       for (const assetId of asset_ids) {
@@ -323,9 +324,7 @@ exports.updateWorkOrder = asyncHandler(async (req, res) => {
   const workOrder = existingWO.rows[0];
 
   // Permission check
-  if (req.user.role === 'technician' && workOrder.assigned_to !== req.user.id) {
-    throw new AppError('You can only update work orders assigned to you', 403);
-  }
+  assertWorkOrderAccess(req.user, workOrder);
 
   // Build update query
   const updateFields = [];

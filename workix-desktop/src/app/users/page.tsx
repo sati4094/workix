@@ -16,7 +16,8 @@ export default function UsersPage() {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await response.json();
-        setUsers(data.data || []);
+        const fetchedUsers = Array.isArray(data?.data?.users) ? data.data.users : [];
+        setUsers(fetchedUsers);
       } catch (error) {
         console.error('Error fetching users:', error);
       } finally {

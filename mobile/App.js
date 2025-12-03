@@ -7,7 +7,7 @@ import { useColorScheme } from 'react-native';
 
 import AppNavigator from './src/navigation/AppNavigator';
 import { useAuthStore } from './src/store/authStore';
-import { initializeOfflineQueue } from './src/services/offlineService';
+import { cleanupOfflineService, initializeOfflineQueue } from './src/services/offlineService';
 
 // Custom theme colors
 const lightTheme = {
@@ -46,7 +46,11 @@ export default function App() {
     
     // Initialize offline queue
     initializeOfflineQueue();
-  }, []);
+    
+    return () => {
+      cleanupOfflineService();
+    };
+  }, [initializeAuth]);
 
   return (
     <SafeAreaProvider>

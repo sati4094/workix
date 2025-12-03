@@ -1,9 +1,10 @@
 import { create } from 'zustand';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService } from '../services/api';
-
-const CACHE_KEY_PREFIX = 'workix_wo_';
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+import {
+  cacheWorkOrders,
+  getCachedWorkOrders,
+  isOnline,
+} from '../services/offlineService';
 
 export const useWorkOrderStore = create((set, get) => ({
   workOrders: [],
@@ -20,29 +21,30 @@ export const useWorkOrderStore = create((set, get) => ({
   // Fetch work orders
   fetchWorkOrders: async (forceRefresh = false) => {
     const state = get();
-    
-    // Check cache first
-    if (!forceRefresh && state.workOrders.length > 0) {
-      const cacheTime = await AsyncStorage.getItem(`${CACHE_KEY_PREFIX}timestamp`);
-      if (cacheTime && Date.now() - parseInt(cacheTime) < CACHE_DURATION) {
-        return;
-      }
-    }
 
     try {
       set({ isLoading: !state.workOrders.length, isRefreshing: !!state.workOrders.length, error: null });
-      
+
       const params = {};
       if (state.filters.status) params.status = state.filters.status;
       if (state.filters.priority) params.priority = state.filters.priority;
-      
-      const response = await apiService.getWorkOrders(params);
-      const workOrders = response.data.work_orders;
-      
-      // Cache the data
-      await AsyncStorage.setItem(`${CACHE_KEY_PREFIX}list`, JSON.stringify(workOrders));
-      await AsyncStorage.setItem(`${CACHE_KEY_PREFIX}timestamp`, Date.now().toString());
-      
+
+      let workOrders = [];
+      let shouldCache = true;
+
+      if (!forceRefresh && !isOnline()) {
+        shouldCache = false;
+        const cached = await getCachedWorkOrders();
+        workOrders = cached.workOrders ?? [];
+      } else {
+        const response = await apiService.getWorkOrders(params);
+        workOrders = response.data.work_orders ?? [];
+      }
+
+      if (shouldCache) {
+        await cacheWorkOrders(workOrders);
+      }
+
       set({ 
         workOrders, 
         isLoading: false, 
@@ -50,11 +52,10 @@ export const useWorkOrderStore = create((set, get) => ({
         error: null 
       });
     } catch (error) {
-      // Try to load from cache on error
       try {
-        const cachedData = await AsyncStorage.getItem(`${CACHE_KEY_PREFIX}list`);
-        if (cachedData) {
-          set({ workOrders: JSON.parse(cachedData) });
+        const cached = await getCachedWorkOrders();
+        if (cached.workOrders?.length) {
+          set({ workOrders: cached.workOrders });
         }
       } catch (cacheError) {
         console.error('Failed to load from cache:', cacheError);
@@ -72,28 +73,23 @@ export const useWorkOrderStore = create((set, get) => ({
   fetchWorkOrderById: async (id) => {
     try {
       set({ isLoading: true, error: null });
-      
+
       const response = await apiService.getWorkOrderById(id);
       const workOrder = response.data.work_order;
-      
-      // Cache individual work order
-      await AsyncStorage.setItem(`${CACHE_KEY_PREFIX}${id}`, JSON.stringify(workOrder));
-      
+
+      await cacheWorkOrders([workOrder]);
+
       set({ 
         currentWorkOrder: workOrder, 
         activities: workOrder.activities || [],
         isLoading: false 
       });
     } catch (error) {
-      // Try cache
       try {
-        const cached = await AsyncStorage.getItem(`${CACHE_KEY_PREFIX}${id}`);
-        if (cached) {
-          const workOrder = JSON.parse(cached);
-          set({ 
-            currentWorkOrder: workOrder, 
-            activities: workOrder.activities || []
-          });
+        const cached = await getCachedWorkOrders();
+        const workOrder = cached.workOrders?.find((wo) => wo.id === id);
+        if (workOrder) {
+          set({ currentWorkOrder: workOrder, activities: workOrder.activities || [] });
         }
       } catch (cacheError) {
         console.error('Cache error:', cacheError);
@@ -107,30 +103,46 @@ export const useWorkOrderStore = create((set, get) => ({
   },
 
   // Update work order status
-  updateWorkOrderStatus: async (id, status) => {
+  updateWorkOrderStatus: async (id, status, options = {}) => {
+    const { optimistic = false } = options;
+    const previousOrders = get().workOrders;
     try {
-      set({ isLoading: true, error: null });
-      
+      set({ isLoading: !optimistic, error: null });
+
+      if (optimistic) {
+        const optimisticOrders = previousOrders.map((wo) =>
+          wo.id === id ? { ...wo, status } : wo,
+        );
+        set({ workOrders: optimisticOrders });
+      }
+
       await apiService.updateWorkOrder(id, { status });
-      
-      // Update local state
-      const updatedWorkOrders = get().workOrders.map(wo =>
-        wo.id === id ? { ...wo, status } : wo
+      const refreshedOrders = previousOrders.map((wo) =>
+        wo.id === id ? { ...wo, status } : wo,
       );
-      
+
       if (get().currentWorkOrder?.id === id) {
         set({ currentWorkOrder: { ...get().currentWorkOrder, status } });
       }
-      
-      set({ workOrders: updatedWorkOrders, isLoading: false });
-      
-      // Invalidate cache
-      await AsyncStorage.removeItem(`${CACHE_KEY_PREFIX}timestamp`);
-      
-      return { success: true };
+
+      set({ workOrders: refreshedOrders, isLoading: false });
+      await cacheWorkOrders(refreshedOrders);
+
+      return { success: true, queued: false };
     } catch (error) {
-      set({ error: error.message, isLoading: false });
-      return { success: false, error: error.message };
+      const message = error.message ?? 'Failed to update';
+
+      if (message.includes('queued for later')) {
+        set({ isLoading: false });
+        return { success: true, queued: true };
+      }
+
+      if (optimistic) {
+        set({ workOrders: previousOrders });
+      }
+
+      set({ error: message, isLoading: false });
+      return { success: false, error: message };
     }
   },
 
@@ -149,10 +161,13 @@ export const useWorkOrderStore = create((set, get) => ({
         activities: updatedActivities, 
         isLoading: false 
       });
-      
-      // Invalidate cache
-      await AsyncStorage.removeItem(`${CACHE_KEY_PREFIX}${workOrderId}`);
-      await AsyncStorage.removeItem(`${CACHE_KEY_PREFIX}timestamp`);
+
+      const current = get().currentWorkOrder;
+      if (current && current.id === workOrderId) {
+        const updatedWorkOrder = { ...current, activities: updatedActivities };
+        set({ currentWorkOrder: updatedWorkOrder });
+        await cacheWorkOrders([updatedWorkOrder]);
+      }
       
       return { success: true, activity: newActivity };
     } catch (error) {

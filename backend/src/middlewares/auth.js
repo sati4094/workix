@@ -23,10 +23,9 @@ const verifyToken = asyncHandler(async (req, res, next) => {
     // Check if user still exists in cache first
     let user = await cache.get(`user:${decoded.id}`);
 
-    if (!user) {
-      // Fetch from database
+    const hydrateUser = async () => {
       const result = await query(
-        'SELECT id, email, name, role, status FROM users WHERE id = $1',
+        'SELECT id, email, name, role, status, enterprise_id, site_id FROM users WHERE id = $1',
         [decoded.id]
       );
 
@@ -35,9 +34,11 @@ const verifyToken = asyncHandler(async (req, res, next) => {
       }
 
       user = result.rows[0];
-
-      // Cache user data for 1 hour
       await cache.set(`user:${decoded.id}`, user, 3600);
+    };
+
+    if (!user || !user.role) {
+      await hydrateUser();
     }
 
     // Check if user is active
@@ -66,7 +67,14 @@ const verifyToken = asyncHandler(async (req, res, next) => {
 // Restrict access to specific roles
 const restrictTo = (...roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
+    const { role } = req.user || {};
+
+    // Allow superadmin to bypass explicit role checks to retain full access
+    if (role === 'superadmin') {
+      return next();
+    }
+
+    if (!roles.includes(role)) {
       throw new AppError('You do not have permission to perform this action.', 403);
     }
     next();
@@ -86,10 +94,10 @@ const optionalAuth = asyncHandler(async (req, res, next) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       
       let user = await cache.get(`user:${decoded.id}`);
-      
-      if (!user) {
+
+      if (!user || !user.role) {
         const result = await query(
-          'SELECT id, email, name, role, status FROM users WHERE id = $1',
+          'SELECT id, email, name, role, status, enterprise_id, site_id FROM users WHERE id = $1',
           [decoded.id]
         );
         if (result.rows.length > 0) {

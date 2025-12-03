@@ -17,17 +17,48 @@ async function runMigration() {
   try {
     console.log('Starting database migration...');
     
-    // Read the schema file
-    const schemaPath = path.join(__dirname, 'schema.sql');
-    const schema = fs.readFileSync(schemaPath, 'utf8');
-    
-    // Execute the schema
-    await client.query(schema);
-    
+    const { rows: userRoleType } = await client.query(
+      "SELECT 1 FROM pg_type WHERE typname = 'user_role'"
+    );
+
+    if (userRoleType.length === 0) {
+      // Fresh install – run full schema bootstrap
+      const schemaPath = path.join(__dirname, 'schema.sql');
+      const schema = fs.readFileSync(schemaPath, 'utf8');
+
+      await client.query(schema);
+
+      console.log('📝 Database tables created');
+      console.log('🔧 Triggers and functions set up');
+      console.log('👀 Views created');
+    } else {
+      // Existing install – apply incremental patches
+      const incrementalPatches = [
+        '005_expand_user_roles.sql',
+        '006_entity_tags.sql'
+      ];
+
+      for (const patchFile of incrementalPatches) {
+        const patchPath = path.join(__dirname, 'migrations', patchFile);
+
+        if (!fs.existsSync(patchPath)) {
+          throw new Error(`Incremental patch ${patchFile} is missing.`);
+        }
+
+        const patchSql = fs.readFileSync(patchPath, 'utf8');
+        await client.query(patchSql);
+        console.log(`✅ Incremental migration applied: ${patchFile}`);
+      }
+
+      await client.query(
+        "UPDATE users SET role = 'superadmin' WHERE email = 'admin@workix.com' AND role <> 'superadmin'"
+      );
+      await client.query(
+        "UPDATE users SET role = 'supertech' WHERE email = 'support@workix.com' AND role <> 'supertech'"
+      );
+    }
+
     console.log('✅ Database migration completed successfully!');
-    console.log('📝 Database tables created');
-    console.log('🔧 Triggers and functions set up');
-    console.log('👀 Views created');
     
   } catch (error) {
     console.error('❌ Migration failed:', error.message);

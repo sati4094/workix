@@ -46,6 +46,15 @@ function WorkOrderCard({ workOrder, onPress }) {
           </Text>
         )}
 
+        {(workOrder.enterprise_name || workOrder.site_name) && (
+          <View style={[styles.footerItem, { marginTop: 4 }]}> 
+            <MaterialCommunityIcons name="office-building" size={14} color={theme.colors.onSurfaceVariant} />
+            <Text variant="bodySmall" style={{ marginLeft: 4, color: theme.colors.onSurfaceVariant }}>
+              {workOrder.enterprise_name || workOrder.site_name}
+            </Text>
+          </View>
+        )}
+
         <View style={styles.cardFooter}>
           <View style={styles.footerItem}>
             <MaterialCommunityIcons name="calendar" size={14} color={theme.colors.onSurfaceVariant} />
